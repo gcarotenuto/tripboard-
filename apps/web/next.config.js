@@ -8,9 +8,7 @@ const nextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
-  experimental: {
-    typedRoutes: true,
-  },
+  experimental: {},
 };
 
 module.exports = nextConfig;

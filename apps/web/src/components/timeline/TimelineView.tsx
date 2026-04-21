@@ -54,7 +54,8 @@ export function TimelineView({ tripId, view }: TimelineViewProps) {
     );
   }
 
-  const grouped = groupEventsByDay(events as Array<{ startsAt: string | null; [key: string]: unknown }>);
+  const groupInput = events.map(e => ({ ...e } as unknown as { startsAt: string | null; [key: string]: unknown }));
+  const grouped = groupEventsByDay(groupInput);
   const sortedDays = Object.keys(grouped).sort();
 
   return (
@@ -71,7 +72,7 @@ export function TimelineView({ tripId, view }: TimelineViewProps) {
           {/* Events for this day */}
           <div className="relative pl-4">
             <div className="timeline-line" />
-            {(grouped[day] as TripEvent[]).map((event) => (
+            {(grouped[day] as unknown as TripEvent[]).map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
