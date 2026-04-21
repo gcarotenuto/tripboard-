@@ -11,9 +11,10 @@ export async function GET(_req: Request, { params }: { params: { tripId: string 
   const trip = await prisma.trip.findFirst({ where: { id: params.tripId, userId } });
   if (!trip) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const [eventCount, documentCount, journalEntryCount, expenseAgg] = await Promise.all([
+  const [eventCount, documentCount, extractedDocumentCount, journalEntryCount, expenseAgg] = await Promise.all([
     prisma.tripEvent.count({ where: { tripId: params.tripId } }),
     prisma.document.count({ where: { tripId: params.tripId, deletedAt: null } }),
+    prisma.document.count({ where: { tripId: params.tripId, deletedAt: null, status: { in: ["EXTRACTED", "REVIEWED"] } } }),
     prisma.journalEntry.count({ where: { tripId: params.tripId, deletedAt: null } }),
     prisma.expense.aggregate({ where: { tripId: params.tripId }, _sum: { amount: true }, _max: { currency: true } }),
   ]);
@@ -22,9 +23,11 @@ export async function GET(_req: Request, { params }: { params: { tripId: string 
     data: {
       eventCount,
       documentCount,
+      extractedDocumentCount,
       journalEntryCount,
       expenseTotal: Math.round((expenseAgg._sum.amount ?? 0) * 100) / 100,
       expenseCurrency: expenseAgg._max.currency ?? "EUR",
+      startsAt: trip.startsAt,
     },
   });
 }

@@ -64,6 +64,37 @@ The target user values privacy, appreciates structure, and wants something that 
 
 ---
 
+## Five Killer Features
+
+These are the capabilities that create defensible differentiation — things TripIt and Wanderlog cannot replicate without rebuilding their core.
+
+### 1. Document Vault with Confidence Scoring
+
+Every ingested document shows an extraction confidence score (0–100%). Documents below the threshold are surfaced in a **Needs Review** queue — clearly separated from confirmed items. Users see exactly what the AI extracted, can verify or override any field, and always know whether a piece of data came from an email, a PDF, an image, or was typed manually. No other consumer travel app exposes this layer.
+
+### 2. Dual Timeline: Logistics vs. Moments
+
+The same date axis powers two completely separate views with different visual languages and different purposes:
+
+- **Logistics** — an execution checklist. Status indicators (check-in open, confirmed, needs review), source badges, confidence scores. Designed for airport corridors and hotel lobbies.
+- **Moments** — a travel story. Journal entries and tagged events rendered as cards with large decorative typography. Designed for reflection, not action.
+
+No competitor separates these concerns. TripIt only has logistics; Wanderlog blurs both.
+
+### 3. Daily Board as Operational Home Screen
+
+On the day of travel, the Daily Board surfaces exactly what matters: urgent reminders first, then the morning briefing, then today's schedule with event types and times, then a **Documents Ready Today** bundle that links directly to the relevant vault entries. A progress bar checklist tracks pre-departure tasks. This is a mission-critical interface — not a dashboard widget.
+
+### 4. Explicit-Only Ingestion with Full Provenance
+
+TripBoard never scans your inbox. Every document enters through a deliberate act: email forward to a dedicated address, PDF upload, image scan, or manual entry. Every document retains its source tag. This is a principled architectural choice, not a missing feature — and it's the entire basis of the privacy positioning.
+
+### 5. Memory Capsule Archive
+
+When a trip ends, TripBoard generates a permanent Memory Capsule: an AI-written narrative summary, a list of trip highlights, and a stats panel (cities, days, journal entries, total spend). The capsule is stored alongside all original documents and is never deleted. No other app in this category treats post-trip data as a first-class product — it's typically stale itinerary data that goes cold.
+
+---
+
 ## Architecture Overview
 
 TripBoard is a **Turborepo monorepo** with two deployable applications and three shared packages.

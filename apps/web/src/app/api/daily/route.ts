@@ -36,13 +36,36 @@ export async function GET(req: Request) {
     where: { tripId: activeTrip.id, date: { gte: dayStart, lte: dayEnd } },
   });
 
-  const events = await prisma.tripEvent.findMany({
-    where: {
-      tripId: activeTrip.id,
-      startsAt: { gte: dayStart, lte: dayEnd },
-    },
-    orderBy: { startsAt: "asc" },
-  });
+  const [events, allDocs] = await Promise.all([
+    prisma.tripEvent.findMany({
+      where: {
+        tripId: activeTrip.id,
+        startsAt: { gte: dayStart, lte: dayEnd },
+      },
+      orderBy: { startsAt: "asc" },
+    }),
+    prisma.document.findMany({
+      where: {
+        tripId: activeTrip.id,
+        deletedAt: null,
+        status: { in: ["EXTRACTED", "REVIEWED"] },
+      },
+      select: { id: true, filename: true, type: true, status: true, extractedData: true },
+    }),
+  ]);
+
+  // Filter documents that are "ready today" — extractedData has a date field matching today
+  const DATE_FIELDS = ["checkIn", "departureDate", "date", "startsAt", "eventDate"];
+  const readyDocuments = allDocs
+    .filter((doc) => {
+      try {
+        const data = JSON.parse((doc.extractedData as unknown as string) || "{}");
+        return DATE_FIELDS.some((f) => data[f] && String(data[f]).startsWith(dateParam));
+      } catch {
+        return false;
+      }
+    })
+    .map(({ id, filename, type, status }) => ({ id, filename, type, status }));
 
   const parsedBoard = board
     ? {
@@ -57,6 +80,7 @@ export async function GET(req: Request) {
       tripId: activeTrip.id,
       tripTitle: activeTrip.title,
       events,
+      readyDocuments,
       ...parsedBoard,
     },
   });
