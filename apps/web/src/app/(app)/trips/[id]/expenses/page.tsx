@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
 import { ExpenseSummaryCard } from "@/components/expenses/ExpenseSummaryCard";
+import { NewExpenseButton } from "@/components/expenses/NewExpenseButton";
 
 export const metadata: Metadata = { title: "Expenses" };
 
@@ -17,9 +18,7 @@ export default function ExpensesPage({ params }: ExpensesPageProps) {
           <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Expenses</h2>
           <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Track your travel spending.</p>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-95 transition-all">
-          + Add Expense
-        </button>
+        <NewExpenseButton tripId={params.id} />
       </div>
 
       {/* Summary */}

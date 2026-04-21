@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { mutate } from "swr";
 import { Modal } from "@tripboard/ui";
 import { MOOD_OPTIONS } from "@tripboard/shared";
 
 export function NewEntryButton({ tripId }: { tripId: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
   const [saving, setSaving] = useState(false);
@@ -18,12 +20,15 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        title: title.trim() || undefined,
         content,
         mood,
         entryDate: new Date().toISOString().split("T")[0],
       }),
     });
 
+    await mutate(`/api/trips/${tripId}/journal`);
+    setTitle("");
     setContent("");
     setMood("");
     setSaving(false);
@@ -41,6 +46,18 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
 
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="New Journal Entry" size="lg">
         <div className="space-y-4">
+          {/* Title */}
+          <div>
+            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Title <span className="text-zinc-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. First day in Lisbon"
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
           {/* Mood picker */}
           <div>
             <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Mood</label>
