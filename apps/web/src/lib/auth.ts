@@ -27,8 +27,8 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!res.ok) return null;
-        const user = (await res.json()) as { id: string; email: string; name: string };
-        return user;
+        const body = (await res.json()) as { data: { id: string; email: string; name: string } };
+        return body.data;
       },
     }),
   ],
