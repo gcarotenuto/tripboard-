@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { Spinner } from "@tripboard/ui";
 
 interface ChecklistItem {
@@ -60,23 +61,52 @@ const DOC_TYPE_EMOJI: Record<string, string> = {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
+function generateId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
 export function DailyBoardView() {
   const today = new Date().toISOString().split("T")[0];
-  const { data, isLoading } = useSWR<DailyData | null>(
+  const { data, isLoading, mutate } = useSWR<DailyData | null>(
     `/api/daily?date=${today}`,
     fetcher
   );
 
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [newItemText, setNewItemText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const items = checklist.length ? checklist : (data?.checklist ?? []);
+
+  async function persistChecklist(updated: ChecklistItem[]) {
+    if (!data?.tripId) return;
+    setChecklist(updated);
+    await fetch("/api/daily/checklist", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tripId: data.tripId, date: today, checklist: updated }),
+    });
+    mutate(`/api/daily?date=${today}`);
+  }
 
   const toggleItem = (id: string) => {
     const base = items.length ? items : (data?.checklist ?? []);
     const updated = base.map((item) =>
       item.id === id ? { ...item, done: !item.done } : item
     );
-    setChecklist(updated);
+    persistChecklist(updated);
+  };
+
+  const addItem = async () => {
+    const text = newItemText.trim();
+    if (!text) return;
+    const base = items.length ? items : (data?.checklist ?? []);
+    const maxOrder = base.reduce((m, i) => Math.max(m, i.order), -1);
+    const newItem: ChecklistItem = { id: generateId(), text, done: false, order: maxOrder + 1 };
+    const updated = [...base, newItem];
+    setNewItemText("");
+    await persistChecklist(updated);
+    inputRef.current?.focus();
   };
 
   const doneCount = items.filter((i) => i.done).length;
@@ -113,7 +143,7 @@ export function DailyBoardView() {
         </span>
       </div>
 
-      {/* Urgent reminders — top of everything */}
+      {/* Urgent reminders */}
       {unacknowledgedReminders.length > 0 && (
         <section>
           {unacknowledgedReminders.map((reminder) => (
@@ -174,7 +204,7 @@ export function DailyBoardView() {
         </section>
       )}
 
-      {/* Documents ready today — the document-first differentiator */}
+      {/* Documents ready today */}
       {hasDocuments && (
         <section>
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-3">
@@ -225,38 +255,53 @@ export function DailyBoardView() {
           </div>
         )}
 
-        {items.length ? (
-          <div className="space-y-2">
-            {items
-              .sort((a, b) => a.order - b.order)
-              .map((item) => (
-                <label
-                  key={item.id}
-                  className="flex items-start gap-3 rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+        <div className="space-y-2">
+          {items.length > 0 && items
+            .sort((a, b) => a.order - b.order)
+            .map((item) => (
+              <label
+                key={item.id}
+                className="flex items-start gap-3 rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={item.done}
+                  onChange={() => toggleItem(item.id)}
+                  className="mt-0.5 h-4 w-4 rounded accent-indigo-600"
+                />
+                <span
+                  className={`text-sm ${
+                    item.done
+                      ? "line-through text-zinc-400 dark:text-zinc-600"
+                      : "text-zinc-800 dark:text-zinc-200"
+                  }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={() => toggleItem(item.id)}
-                    className="mt-0.5 h-4 w-4 rounded accent-indigo-600"
-                  />
-                  <span
-                    className={`text-sm ${
-                      item.done
-                        ? "line-through text-zinc-400 dark:text-zinc-600"
-                        : "text-zinc-800 dark:text-zinc-200"
-                    }`}
-                  >
-                    {item.text}
-                  </span>
-                </label>
-              ))}
+                  {item.text}
+                </span>
+              </label>
+            ))}
+
+          {/* Add item input */}
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5">
+            <input
+              ref={inputRef}
+              type="text"
+              className="flex-1 bg-transparent text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
+              placeholder="Add item…"
+              value={newItemText}
+              onChange={(e) => setNewItemText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addItem(); }}
+            />
+            <button
+              onClick={addItem}
+              disabled={!newItemText.trim()}
+              className="text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 transition-colors"
+              title="Add item"
+            >
+              <Plus size={16} />
+            </button>
           </div>
-        ) : (
-          <p className="text-sm text-zinc-400 dark:text-zinc-500 py-2 text-center italic">
-            No checklist for today.
-          </p>
-        )}
+        </div>
       </section>
     </div>
   );

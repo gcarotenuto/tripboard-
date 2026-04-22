@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
+import { Trash2, Pencil, X } from "lucide-react";
 import type { TripEvent } from "@tripboard/shared";
 import {
   formatDate,
@@ -19,7 +21,6 @@ function getEventStatus(event: TripEvent): { label: string; color: string; icon:
   const start = event.startsAt ? new Date(event.startsAt) : null;
   const hoursUntil = start ? (start.getTime() - now.getTime()) / 1000 / 3600 : null;
 
-  // Check-in window logic for flights/hotels
   if (event.type === "FLIGHT" && hoursUntil !== null) {
     if (hoursUntil < 0) return { label: "Departed", color: "text-zinc-400", icon: "✓" };
     if (hoursUntil <= 24 && hoursUntil > 0) return { label: "Check-in open", color: "text-amber-600 dark:text-amber-400", icon: "⏰" };
@@ -54,11 +55,68 @@ function SourceBadge({ source, confidence }: { source: string | null; confidence
   );
 }
 
+function toDatetimeLocal(val: string | null | undefined): string {
+  if (!val) return "";
+  return new Date(val).toISOString().slice(0, 16);
+}
+
+interface EditForm {
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  locationName: string;
+  notes: string;
+}
+
 export function LogisticsView({ tripId }: { tripId: string }) {
-  const { data: events, isLoading, error } = useSWR<TripEvent[]>(
+  const { data: events, isLoading, error, mutate } = useSWR<TripEvent[]>(
     `/api/trips/${tripId}/events?view=LOGISTICS`,
     fetcher
   );
+
+  const [editingEvent, setEditingEvent] = useState<TripEvent | null>(null);
+  const [form, setForm] = useState<EditForm>({ title: "", startsAt: "", endsAt: "", locationName: "", notes: "" });
+  const [saving, setSaving] = useState(false);
+
+  function openEdit(event: TripEvent) {
+    setEditingEvent(event);
+    setForm({
+      title: event.title,
+      startsAt: toDatetimeLocal(event.startsAt),
+      endsAt: toDatetimeLocal(event.endsAt),
+      locationName: event.locationName ?? "",
+      notes: event.notes ?? "",
+    });
+  }
+
+  function closeEdit() {
+    setEditingEvent(null);
+  }
+
+  async function handleDelete(event: TripEvent) {
+    if (!window.confirm("Delete this event?")) return;
+    await fetch(`/api/trips/${tripId}/events/${event.id}`, { method: "DELETE" });
+    mutate(`/api/trips/${tripId}/events?view=LOGISTICS`);
+  }
+
+  async function handleSave() {
+    if (!editingEvent) return;
+    setSaving(true);
+    await fetch(`/api/trips/${tripId}/events/${editingEvent.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: form.title,
+        startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+        endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+        locationName: form.locationName || null,
+        notes: form.notes || null,
+      }),
+    });
+    setSaving(false);
+    closeEdit();
+    mutate(`/api/trips/${tripId}/events?view=LOGISTICS`);
+  }
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
 
@@ -81,97 +139,198 @@ export function LogisticsView({ tripId }: { tripId: string }) {
   const grouped = groupEventsByDay(events as unknown as Array<{ startsAt: string | null; [key: string]: unknown }>);
   const sortedDays = Object.keys(grouped).sort();
 
-  // Surface items needing attention
   const needsAttention = events.filter(e => e.confidence !== null && e.confidence < 0.7);
 
   return (
-    <div className="space-y-6">
-      {/* Needs attention banner */}
-      {needsAttention.length > 0 && (
-        <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 flex items-start gap-3">
-          <span className="text-lg shrink-0">⚠️</span>
-          <div>
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-              {needsAttention.length} item{needsAttention.length > 1 ? "s" : ""} need your review
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-              Low extraction confidence — check the details are correct before you travel.
-            </p>
+    <>
+      <div className="space-y-6">
+        {/* Needs attention banner */}
+        {needsAttention.length > 0 && (
+          <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 flex items-start gap-3">
+            <span className="text-lg shrink-0">⚠️</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                {needsAttention.length} item{needsAttention.length > 1 ? "s" : ""} need your review
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                Low extraction confidence — check the details are correct before you travel.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {sortedDays.map((day) => (
+          <div key={day}>
+            {/* Day header */}
+            <div className="sticky top-0 z-10 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur py-2 mb-3 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
+                {day === "undated" ? "Undated" : formatDate(day)}
+              </p>
+              <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                {(grouped[day] as unknown as TripEvent[]).length} event{(grouped[day] as unknown as TripEvent[]).length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Events */}
+            <div className="space-y-2">
+              {(grouped[day] as unknown as TripEvent[]).map((event) => {
+                const status = getEventStatus(event);
+                const emoji = event.emoji ?? EVENT_TYPE_EMOJIS[event.type] ?? "📌";
+                const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
+
+                return (
+                  <div
+                    key={event.id}
+                    className={`group rounded-xl border bg-white dark:bg-zinc-900 px-4 py-3 transition-colors ${
+                      event.confidence !== null && event.confidence < 0.7
+                        ? "border-amber-200 dark:border-amber-900"
+                        : "border-zinc-200/60 dark:border-zinc-800 hover:border-indigo-200 dark:hover:border-indigo-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Type emoji */}
+                      <span className="text-xl shrink-0">{emoji}</span>
+
+                      {/* Main content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                            {event.title}
+                          </p>
+                          <SourceBadge source={event.sourceType} confidence={event.confidence} />
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
+                          {event.locationName && (
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500">📍 {event.locationName}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: time + status + actions */}
+                      <div className="shrink-0 text-right flex items-center gap-2">
+                        <div>
+                          <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                            {event.startsAt ? formatTime(event.startsAt, event.timezone ?? undefined) : "All day"}
+                          </p>
+                          <p className={`text-xs font-medium mt-0.5 ${status.color}`}>
+                            {status.icon} {status.label}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openEdit(event)}
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-950/40 transition-colors"
+                            title="Edit event"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(event)}
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-colors"
+                            title="Delete event"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    {event.notes && (
+                      <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500 pl-9 italic">
+                        {event.notes}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Edit modal */}
+      {editingEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">Edit Event</h2>
+              <button onClick={closeEdit} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">Title</label>
+                <input
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">Starts At</label>
+                <input
+                  type="datetime-local"
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={form.startsAt}
+                  onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">Ends At</label>
+                <input
+                  type="datetime-local"
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={form.endsAt}
+                  onChange={(e) => setForm({ ...form, endsAt: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">Location</label>
+                <input
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={form.locationName}
+                  onChange={(e) => setForm({ ...form, locationName: e.target.value })}
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">Notes</label>
+                <textarea
+                  rows={2}
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={closeEdit}
+                className="flex-1 rounded-lg border border-zinc-200 dark:border-zinc-700 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {sortedDays.map((day) => (
-        <div key={day}>
-          {/* Day header */}
-          <div className="sticky top-0 z-10 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur py-2 mb-3 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
-              {day === "undated" ? "Undated" : formatDate(day)}
-            </p>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">
-              {(grouped[day] as unknown as TripEvent[]).length} event{(grouped[day] as unknown as TripEvent[]).length !== 1 ? "s" : ""}
-            </span>
-          </div>
-
-          {/* Events */}
-          <div className="space-y-2">
-            {(grouped[day] as unknown as TripEvent[]).map((event) => {
-              const status = getEventStatus(event);
-              const emoji = event.emoji ?? EVENT_TYPE_EMOJIS[event.type] ?? "📌";
-              const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
-
-              return (
-                <div
-                  key={event.id}
-                  className={`rounded-xl border bg-white dark:bg-zinc-900 px-4 py-3 transition-colors ${
-                    event.confidence !== null && event.confidence < 0.7
-                      ? "border-amber-200 dark:border-amber-900"
-                      : "border-zinc-200/60 dark:border-zinc-800 hover:border-indigo-200 dark:hover:border-indigo-800"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Type emoji */}
-                    <span className="text-xl shrink-0">{emoji}</span>
-
-                    {/* Main content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                          {event.title}
-                        </p>
-                        <SourceBadge source={event.sourceType} confidence={event.confidence} />
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
-                        {event.locationName && (
-                          <span className="text-xs text-zinc-400 dark:text-zinc-500">📍 {event.locationName}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right: time + status */}
-                    <div className="shrink-0 text-right">
-                      <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
-                        {event.startsAt ? formatTime(event.startsAt, event.timezone ?? undefined) : "All day"}
-                      </p>
-                      <p className={`text-xs font-medium mt-0.5 ${status.color}`}>
-                        {status.icon} {status.label}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  {event.notes && (
-                    <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500 pl-9 italic">
-                      {event.notes}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
+    </>
   );
 }
