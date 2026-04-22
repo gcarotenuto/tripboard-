@@ -23,10 +23,6 @@ export const metadata: Metadata = {
   description: "Privacy-first digital travel operating system. Plan, organize, live, and remember your trips.",
   applicationName: "TripBoard",
   keywords: ["travel", "trip planner", "travel journal", "document vault", "itinerary"],
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
   manifest: "/manifest.json",
 };
 
