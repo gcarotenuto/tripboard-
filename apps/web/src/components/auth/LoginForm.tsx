@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 const GOOGLE_CONFIGURED = !!(
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID &&
@@ -112,7 +113,14 @@ export function LoginForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1.5">Password</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-zinc-300">Password</label>
+            {mode === "signin" && (
+              <Link href="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300">
+                Forgot password?
+              </Link>
+            )}
+          </div>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
