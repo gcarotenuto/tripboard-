@@ -5,6 +5,8 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, type AuthRequest } from "../middleware/auth";
 import { createError } from "../middleware/error";
 import { logger } from "../lib/logger";
+import { enqueueIngestJob } from "../lib/queue";
+import { processEmailInline } from "../lib/ingest-processor";
 
 export const ingestRouter = Router();
 
@@ -98,15 +100,46 @@ ingestRouter.post("/email", async (req, res, next) => {
         tripId: ingestToken.tripId,
         status: "QUEUED",
         source: "EMAIL_FORWARD",
-        rawPayload: req.body as object,
+        rawPayload: JSON.stringify(req.body),
       },
     });
 
     logger.info(`Email ingest job created: ${job.id} for user ${ingestToken.userId}`);
 
-    // TODO: enqueue to Bull queue for background processing
+    // Enqueue to Bull queue for background processing (no-op if Redis unavailable)
+    await enqueueIngestJob({
+      ingestJobId: job.id,
+      userId: ingestToken.userId,
+      tripId: ingestToken.tripId ?? undefined,
+      source: "email_forward",
+    });
 
     res.json({ data: { jobId: job.id, status: "queued" } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /ingest/email/simulate — synchronously parse an email inline (no queue/Redis needed)
+ingestRouter.post("/email/simulate", requireAuth, async (req: AuthRequest, res, next) => {
+  try {
+    const Schema = z.object({
+      from: z.string().optional().default(""),
+      subject: z.string().min(1),
+      body: z.string().min(1),
+      tripId: z.string().uuid().optional(),
+    });
+    const { from, subject, body, tripId } = Schema.parse(req.body);
+
+    const result = await processEmailInline({
+      from,
+      subject,
+      body,
+      tripId,
+      userId: req.userId!,
+    });
+
+    res.json({ data: result });
   } catch (err) {
     next(err);
   }

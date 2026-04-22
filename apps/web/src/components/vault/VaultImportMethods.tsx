@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { MAX_FILE_SIZE_BYTES } from "@tripboard/shared";
 import { mutate } from "swr";
+import { EmailParsePanel } from "./EmailParsePanel";
 
 const EMAIL_ADDRESS = "vault@tripboard.app";
 
@@ -19,6 +20,7 @@ export function VaultImportMethods({ tripId }: Props) {
   const [uploadError, setUploadError] = useState("");
   const [uploadDone, setUploadDone] = useState("");
   const [manualHint, setManualHint] = useState(false);
+  const [showSimulate, setShowSimulate] = useState(false);
 
   async function handleFile(file: File) {
     setUploadError("");
@@ -44,6 +46,7 @@ export function VaultImportMethods({ tripId }: Props) {
 
   function copyEmail() {
     setEmailCopied(true);
+    setShowSimulate(true);
     setTimeout(() => setEmailCopied(false), 2500);
     try {
       if (navigator.clipboard?.writeText) {
@@ -145,6 +148,10 @@ export function VaultImportMethods({ tripId }: Props) {
           </div>
         </button>
       </div>
+
+      {showSimulate && (
+        <EmailParsePanel tripId={tripId} onClose={() => setShowSimulate(false)} />
+      )}
 
       <div className="mt-4 flex items-center justify-between gap-1.5">
         <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-600">
