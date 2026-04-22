@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "node scripts/swap-db-provider.js && npx prisma generate && npx prisma db push --accept-data-loss && next build",
+    "build": "node scripts/swap-db-provider.js && npx prisma generate --schema=../../prisma/schema.prisma && npx prisma db push --schema=../../prisma/schema.prisma --accept-data-loss && next build",
     "start": "next start -p 3000",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
