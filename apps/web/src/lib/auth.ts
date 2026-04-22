@@ -1,6 +1,8 @@
 import { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 const googleProvider =
   process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -22,18 +24,21 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) return null;
 
-        const res = await fetch(`${process.env.API_URL}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
-          }),
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
         });
+        if (!user) return null;
 
-        if (!res.ok) return null;
-        const body = (await res.json()) as { data: { id: string; email: string; name: string } };
-        return body.data;
+        // Password hash is stored in the credentials Account's access_token
+        const account = await prisma.account.findFirst({
+          where: { userId: user.id, provider: "credentials" },
+        });
+        if (!account?.access_token) return null;
+
+        const valid = await bcrypt.compare(credentials.password, account.access_token);
+        if (!valid) return null;
+
+        return { id: user.id, email: user.email, name: user.name };
       },
     }),
   ],
