@@ -16,15 +16,15 @@
   }
 
   body {
-    @apply text-zinc-900 dark:text-zinc-100;
+    @apply bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   ::-webkit-scrollbar-track {
@@ -32,11 +32,11 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-zinc-300 dark:bg-zinc-700 rounded-full;
+    @apply bg-zinc-200 dark:bg-zinc-700 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-zinc-400 dark:bg-zinc-600;
+    @apply bg-zinc-300 dark:bg-zinc-600;
   }
 }
 
@@ -52,5 +52,14 @@
   .event-card::before {
     content: "";
     @apply absolute left-0 top-3 -translate-x-1/2 h-2 w-2 rounded-full bg-indigo-500 ring-2 ring-white dark:ring-zinc-950;
+  }
+
+  /* Glass card utility */
+  .card {
+    @apply rounded-2xl border border-zinc-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900;
+  }
+
+  .card-hover {
+    @apply hover:border-indigo-200 hover:shadow-lg hover:shadow-zinc-900/5 dark:hover:border-indigo-800 transition-all;
   }
 }

@@ -6,14 +6,14 @@ export const metadata: Metadata = { title: "Trip Hub" };
 
 export default function TripsPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex items-start justify-between">
+    <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
             Trip Hub
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            All your trips, in one place.
+          <p className="mt-0.5 text-sm text-zinc-400 dark:text-zinc-500">
+            All your trips, planned and remembered.
           </p>
         </div>
         <NewTripButton />

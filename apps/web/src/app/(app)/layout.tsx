@@ -13,12 +13,12 @@ export default async function AppLayout({
   if (!session) redirect("/login");
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950">
       {/* Desktop sidebar */}
       <Sidebar />
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+      <main className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950 pb-20 md:pb-0">
         {children}
       </main>
 

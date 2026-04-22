@@ -313,6 +313,54 @@ async function main() {
     },
   ]});
 
+  await prisma.document.createMany({ data: [
+    {
+      userId: user.id, tripId: italy.id, filename: "Ryanair_FR1234.pdf",
+      mimeType: "application/pdf", fileSize: 118200,
+      storageKey: "demo/Ryanair_FR1234.pdf", type: "FLIGHT_TICKET",
+      status: "EXTRACTED", source: "EMAIL_FORWARD",
+      extractedData: JSON.stringify({ flightNumber: "FR1234", airline: "Ryanair", bookingRef: "RYABC1", departureDate: "2025-09-05", seat: "18F" }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.99,
+      tags: JSON.stringify(["flight", "ryanair"]),
+    },
+    {
+      userId: user.id, tripId: italy.id, filename: "Hotel_Artemide_Rome.pdf",
+      mimeType: "application/pdf", fileSize: 98400,
+      storageKey: "demo/Hotel_Artemide_Rome.pdf", type: "HOTEL_VOUCHER",
+      status: "EXTRACTED", source: "PDF_UPLOAD",
+      extractedData: JSON.stringify({ hotel: "Hotel Artemide", confirmationNumber: "ART-2025-4421", checkIn: "2025-09-05", checkOut: "2025-09-09", nights: 4 }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.96,
+      tags: JSON.stringify(["hotel", "rome"]),
+    },
+    {
+      userId: user.id, tripId: italy.id, filename: "Le_Sirenuse_Positano.pdf",
+      mimeType: "application/pdf", fileSize: 142600,
+      storageKey: "demo/Le_Sirenuse_Positano.pdf", type: "HOTEL_VOUCHER",
+      status: "EXTRACTED", source: "PDF_UPLOAD",
+      extractedData: JSON.stringify({ hotel: "Le Sirenuse", confirmationNumber: "SIR-2025-GOLD", checkIn: "2025-09-11", checkOut: "2025-09-14", nights: 3 }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.98,
+      tags: JSON.stringify(["hotel", "positano"]),
+    },
+    {
+      userId: user.id, tripId: italy.id, filename: "Italo_Roma_Napoli.pdf",
+      mimeType: "application/pdf", fileSize: 64200,
+      storageKey: "demo/Italo_Roma_Napoli.pdf", type: "OTHER",
+      status: "EXTRACTED", source: "EMAIL_FORWARD",
+      extractedData: JSON.stringify({ operator: "Italo", trainNumber: "FR9508", bookingRef: "ITALO-221B", departureDate: "2025-09-09", seat: "4B" }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.93,
+      tags: JSON.stringify(["train", "italo"]),
+    },
+    {
+      userId: user.id, tripId: italy.id, filename: "Colosseum_sunrise_tour.pdf",
+      mimeType: "application/pdf", fileSize: 38100,
+      storageKey: "demo/Colosseum_sunrise_tour.pdf", type: "BOOKING_CONFIRMATION",
+      status: "REVIEWED", source: "MANUAL",
+      extractedData: JSON.stringify({ attraction: "Colosseum", ticketRef: "COL-SUNRISE-1234", date: "2025-09-06", guide: "Marco Rossi" }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 1.0,
+      tags: JSON.stringify(["activity", "colosseum"]),
+    },
+  ]});
+
   await prisma.expense.createMany({ data: [
     { userId: user.id, tripId: italy.id, title: "Colosseum private tour", amount: 90, currency: "EUR", category: "ACTIVITIES", date: new Date("2025-09-06"), isPaid: true },
     { userId: user.id, tripId: italy.id, title: "Hotel Artemide — 4 nights", amount: 620, currency: "EUR", category: "ACCOMMODATION", date: new Date("2025-09-05"), isPaid: true },
@@ -431,6 +479,24 @@ async function main() {
       details: JSON.stringify({ bookingRef: "HERTZ-20260418", car: "VW Golf", days: 7 }),
       sourceType: "email", confidence: 0.91,
     },
+    {
+      tripId: portugal.id, title: "Douro Valley wine tasting — Quinta da Gaivosa",
+      type: "ACTIVITY", view: "BOTH",
+      startsAt: new Date("2026-04-22T11:00:00Z"), endsAt: new Date("2026-04-22T14:00:00Z"),
+      timezone: "Europe/Lisbon", locationName: "Quinta da Gaivosa, Douro Valley",
+      locationLat: 41.1760, locationLng: -7.7600,
+      details: JSON.stringify({ bookingRef: "GAIV-2026-88", admission: 35, includes: ["3 wines", "charcuterie board"] }),
+      sourceType: "email", confidence: 0.93, emoji: "🍷",
+    },
+    {
+      tripId: portugal.id, title: "Torel Palace Porto — Check-in",
+      type: "HOTEL", view: "LOGISTICS",
+      startsAt: new Date("2026-04-22T15:00:00Z"), endsAt: new Date("2026-04-25T11:00:00Z"),
+      timezone: "Europe/Lisbon", locationName: "Torel Palace, Rua de Entremuros, Porto",
+      locationLat: 41.1450, locationLng: -8.6100,
+      details: JSON.stringify({ confirmationNumber: "TOREL-2026-441", nights: 3, roomType: "Superior River View", breakfast: true }),
+      sourceType: "pdf", confidence: 0.97,
+    },
   ]});
 
   await prisma.expense.createMany({ data: [
@@ -457,13 +523,59 @@ async function main() {
     },
   ]});
 
+  await prisma.document.createMany({ data: [
+    {
+      userId: user.id, tripId: portugal.id, filename: "TAP_TP1235_booking.pdf",
+      mimeType: "application/pdf", fileSize: 128400,
+      storageKey: "demo/TAP_TP1235_booking.pdf", type: "FLIGHT_TICKET",
+      status: "EXTRACTED", source: "EMAIL_FORWARD",
+      extractedData: JSON.stringify({ flightNumber: "TP1235", airline: "TAP Portugal", bookingRef: "TAPXYZ", departureDate: "2026-04-14", seat: "22A" }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.98,
+      tags: JSON.stringify(["flight", "tap"]),
+    },
+    {
+      userId: user.id, tripId: portugal.id, filename: "hertz_car_rental.pdf",
+      mimeType: "application/pdf", fileSize: 87200,
+      storageKey: "demo/hertz_car_rental.pdf", type: "OTHER",
+      status: "EXTRACTED", source: "EMAIL_FORWARD",
+      extractedData: JSON.stringify({ company: "Hertz", bookingRef: "HERTZ-20260418", car: "VW Golf", pickupDate: "2026-04-18", returnDate: "2026-04-25" }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.91,
+      tags: JSON.stringify(["car-rental", "hertz"]),
+    },
+    {
+      userId: user.id, tripId: portugal.id, filename: "torel_palace_porto.pdf",
+      mimeType: "application/pdf", fileSize: 104600,
+      storageKey: "demo/torel_palace_porto.pdf", type: "HOTEL_VOUCHER",
+      status: "EXTRACTED", source: "PDF_UPLOAD",
+      extractedData: JSON.stringify({ hotel: "Torel Palace Porto", confirmationNumber: "TOREL-2026-441", checkIn: "2026-04-22", checkOut: "2026-04-25", nights: 3 }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.97,
+      tags: JSON.stringify(["hotel", "porto"]),
+    },
+    {
+      userId: user.id, tripId: portugal.id, filename: "douro_wine_tour.pdf",
+      mimeType: "application/pdf", fileSize: 42800,
+      storageKey: "demo/douro_wine_tour.pdf", type: "BOOKING_CONFIRMATION",
+      status: "EXTRACTED", source: "EMAIL_FORWARD",
+      extractedData: JSON.stringify({ operator: "Quinta da Gaivosa", bookingRef: "GAIV-2026-88", date: "2026-04-22", admission: 35 }),
+      extractionModel: "claude-sonnet-4-6", extractionConfidence: 0.93,
+      tags: JSON.stringify(["activity", "wine"]),
+    },
+    {
+      userId: user.id, tripId: portugal.id, filename: "travel_insurance.pdf",
+      mimeType: "application/pdf", fileSize: 198300,
+      storageKey: "demo/travel_insurance.pdf", type: "INSURANCE",
+      status: "PENDING", source: "PDF_UPLOAD",
+      tags: JSON.stringify(["insurance"]),
+    },
+  ]});
+
   await prisma.dailyBoard.createMany({ data: [
     {
       tripId: portugal.id, date: new Date("2026-04-21"),
-      morningBriefing: "Day 8 on the road. You're somewhere between Algarve and Porto today — pick up the car from Lagos and start the coastal drive north. The N120 hugs the cliffs for the first hour. Stop at Sagres for a coffee before you lose the signal.",
+      morningBriefing: "Day 8 on the road. Somewhere between Algarve and the Douro Valley. The N120 hugs the cliffs for the first hour heading north. Stop at Sagres for a coffee before you lose signal.",
       checklist: JSON.stringify([
-        { id: "pt-1", text: "Check out of Lagos pousada by 10am", done: false, order: 1 },
-        { id: "pt-2", text: "Fill up the rental car — last cheap station on the N125", done: false, order: 2 },
+        { id: "pt-1", text: "Check out of Lagos pousada by 10am", done: true, order: 1 },
+        { id: "pt-2", text: "Fill up the rental car — last cheap station on the N125", done: true, order: 2 },
         { id: "pt-3", text: "Stop at Cabo de São Vicente (westernmost point of Europe!)", done: false, order: 3 },
         { id: "pt-4", text: "Book dinner in Porto for Thursday", done: false, order: 4 },
         { id: "pt-5", text: "Call home — you haven't in 3 days", done: false, order: 5 },
@@ -472,9 +584,24 @@ async function main() {
         { id: "pt-r1", text: "Car rental return is April 25 at Lisbon Airport — don't miss it.", acknowledged: false },
       ]),
     },
+    {
+      tripId: portugal.id, date: new Date("2026-04-22"),
+      morningBriefing: "Day 9 — the Douro Valley. Wine tasting at Quinta da Gaivosa at 11am, then check into Torel Palace Porto at 3pm. Tonight: Francesinha at Café Santiago, the dish Porto is actually famous for. Do not miss it.",
+      checklist: JSON.stringify([
+        { id: "pt22-1", text: "Drive to Douro Valley — leave by 9am", done: false, order: 1 },
+        { id: "pt22-2", text: "Wine tasting at Quinta da Gaivosa (11:00)", done: false, order: 2 },
+        { id: "pt22-3", text: "Check into Torel Palace Porto (from 15:00)", done: false, order: 3 },
+        { id: "pt22-4", text: "Sunset at Miradouro da Serra do Pilar", done: false, order: 4 },
+        { id: "pt22-5", text: "Francesinha dinner — Café Santiago", done: false, order: 5 },
+      ]),
+      reminders: JSON.stringify([
+        { id: "pt22-r1", text: "Wine tour confirmation ref: GAIV-2026-88. Meet at the quinta gate at 10:50.", acknowledged: false },
+        { id: "pt22-r2", text: "Car rental return: April 25 at Lisbon Airport. 3 days left.", acknowledged: false },
+      ]),
+    },
   ]});
 
-  console.log(`✅ Portugal trip: 6 events, 6 expenses, 2 journal entries, 1 daily board`);
+  console.log(`✅ Portugal trip: 8 events, 5 docs, 6 expenses, 2 journal entries, 2 daily boards`);
 
   // ─── TRIP 4: Morocco Desert Adventure (PLANNING) ──────────────────────
   const morocco = await prisma.trip.create({

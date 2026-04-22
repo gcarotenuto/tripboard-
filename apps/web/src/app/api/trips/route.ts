@@ -11,19 +11,30 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const statusParam = searchParams.get("status");
 
-  const statusFilter = statusParam
-    ? { status: { in: statusParam.split(",") } }
-    : {};
+  const statuses = statusParam ? statusParam.split(",").map((s) => s.trim()) : null;
+
+  // For archive queries (COMPLETED / ARCHIVED), don't restrict on isArchived
+  // since completed trips naturally have isArchived=false until explicitly archived
+  const isArchiveQuery = statuses?.some((s) => ["COMPLETED", "ARCHIVED"].includes(s));
 
   const trips = await prisma.trip.findMany({
-    where: { userId, isArchived: false, deletedAt: null, ...statusFilter },
-    orderBy: { startsAt: "asc" },
+    where: {
+      userId,
+      deletedAt: null,
+      ...(isArchiveQuery ? {} : { isArchived: false }),
+      ...(statuses ? { status: { in: statuses } } : {}),
+    },
+    orderBy: { startsAt: "desc" },
   });
 
   const parsed = trips.map((t) => ({
     ...t,
-    tags: JSON.parse(t.tags || "[]"),
-    destinations: JSON.parse(t.destinations || "[]"),
+    tags: (() => { try { return JSON.parse(t.tags || "[]"); } catch { return []; } })(),
+    destinations: (() => { try { return JSON.parse(t.destinations || "[]"); } catch { return []; } })(),
+    memoryCapsule: (() => {
+      if (!t.memoryCapsule) return null;
+      try { return JSON.parse(t.memoryCapsule as unknown as string); } catch { return null; }
+    })(),
   }));
 
   return NextResponse.json({ data: parsed });

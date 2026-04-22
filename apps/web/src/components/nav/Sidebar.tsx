@@ -2,43 +2,54 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { cn } from "@tripboard/ui";
+import {
+  Map,
+  Sun,
+  Archive,
+  Settings,
+  CalendarDays,
+  Lock,
+  BookOpen,
+  CreditCard,
+  ChevronRight,
+  Plane,
+} from "lucide-react";
 
 const TOP_NAV = [
-  { href: "/trips", label: "Trip Hub", emoji: "🗺️" },
-  { href: "/daily", label: "Daily Board", emoji: "☀️" },
-  { href: "/archive", label: "Archive", emoji: "🗄️" },
+  { href: "/trips", label: "Trip Hub", Icon: Map },
+  { href: "/daily", label: "Daily Board", Icon: Sun },
+  { href: "/archive", label: "Archive", Icon: Archive },
 ];
 
 const TRIP_SECTIONS = [
-  { href: "timeline", label: "Timeline", emoji: "📅" },
-  { href: "vault", label: "Vault", emoji: "🗄️" },
-  { href: "journal", label: "Journal", emoji: "📓" },
-  { href: "expenses", label: "Expenses", emoji: "💳" },
+  { href: "timeline", label: "Timeline", Icon: CalendarDays },
+  { href: "vault", label: "Vault", Icon: Lock },
+  { href: "journal", label: "Journal", Icon: BookOpen },
+  { href: "expenses", label: "Expenses", Icon: CreditCard },
 ];
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
 function TripSubNav({ tripId, pathname }: { tripId: string; pathname: string }) {
-  const { data: trip } = useSWR<{ title: string } | null>(
-    `/api/trips/${tripId}`,
-    fetcher
-  );
+  const { data: trip } = useSWR<{ title: string } | null>(`/api/trips/${tripId}`, fetcher);
 
   return (
-    <div className="mt-1 mb-2">
-      {/* Trip name */}
+    <div className="mt-1 mb-1">
+      {/* Trip name pill */}
       <Link
         href={`/trips/${tripId}`}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+        className="mx-2 mb-1 flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group"
       >
-        <span className="text-xs font-semibold uppercase tracking-widest text-indigo-500 dark:text-indigo-400 truncate">
+        <ChevronRight className="h-3 w-3 text-zinc-400 dark:text-zinc-600 shrink-0" />
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 truncate">
           {trip?.title ?? "…"}
         </span>
       </Link>
       {/* Section links */}
-      <div className="ml-2 pl-3 border-l border-zinc-200 dark:border-zinc-700 space-y-0.5">
+      <div className="ml-3 pl-3 border-l-2 border-zinc-100 dark:border-zinc-800 space-y-0.5">
         {TRIP_SECTIONS.map((s) => {
           const href = `/trips/${tripId}/${s.href}`;
           const isActive = pathname.startsWith(href);
@@ -49,12 +60,17 @@ function TripSubNav({ tripId, pathname }: { tripId: string; pathname: string }) 
               className={cn(
                 "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
                 isActive
-                  ? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-950/50 dark:text-indigo-400"
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                  ? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-950/60 dark:text-indigo-300"
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-200"
               )}
             >
-              <span className="text-sm">{s.emoji}</span>
-              {s.label}
+              <s.Icon
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0",
+                  isActive ? "text-indigo-500" : "text-zinc-400 dark:text-zinc-600"
+                )}
+              />
+              <span className="text-xs font-medium">{s.label}</span>
             </Link>
           );
         })}
@@ -65,43 +81,56 @@ function TripSubNav({ tripId, pathname }: { tripId: string; pathname: string }) 
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const tripMatch = pathname.match(/^\/trips\/([a-f0-9-]{36})/);
   const activeTripId = tripMatch?.[1] ?? null;
 
+  const user = session?.user as { name?: string; email?: string } | undefined;
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "?";
+
   return (
-    <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 py-6">
+    <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950 py-5">
       {/* Logo */}
-      <div className="px-5 mb-8">
-        <Link href="/trips" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600">
-            <span className="text-sm">✈️</span>
+      <div className="px-4 mb-6">
+        <Link href="/trips" className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm shadow-indigo-500/30">
+            <Plane className="h-4 w-4 text-white" />
           </div>
-          <span className="font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">TripBoard</span>
+          <span className="font-bold text-[15px] text-zinc-900 dark:text-zinc-100 tracking-tight">
+            TripBoard
+          </span>
         </Link>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
         {TOP_NAV.map((item) => {
-          const isActive = pathname === item.href ||
-            (item.href === "/trips" && pathname.startsWith("/trips"));
+          const isTripHubActive = item.href === "/trips" && pathname.startsWith("/trips");
+          const isActive = pathname === item.href || isTripHubActive;
+
           return (
             <div key={item.href}>
               <Link
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                  isActive && item.href !== "/trips"
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
-                    : item.href === "/trips" && pathname.startsWith("/trips")
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
-                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-200"
                 )}
               >
-                <span className="text-base">{item.emoji}</span>
+                <item.Icon
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    isActive ? "text-indigo-500 dark:text-indigo-400" : "text-zinc-400 dark:text-zinc-600"
+                  )}
+                />
                 {item.label}
               </Link>
-              {/* Trip sub-nav when inside a trip */}
+
+              {/* Trip sub-nav */}
               {item.href === "/trips" && activeTripId && (
                 <TripSubNav tripId={activeTripId} pathname={pathname} />
               )}
@@ -110,15 +139,32 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Settings */}
-      <div className="px-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+      {/* Bottom: Settings + User */}
+      <div className="px-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-0.5">
         <Link
           href="/settings"
-          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-500 dark:hover:bg-zinc-800 transition-colors"
+          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-zinc-500 hover:bg-zinc-100 dark:text-zinc-500 dark:hover:bg-zinc-800/70 transition-colors"
         >
-          <span className="text-base">⚙️</span>
+          <Settings className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
           Settings
         </Link>
+
+        {/* User profile */}
+        {user && (
+          <div className="flex items-center gap-3 px-3 py-2 mt-1">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shrink-0">
+              <span className="text-[10px] font-bold text-white">{initials}</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 truncate leading-tight">
+                {user.name ?? "Traveler"}
+              </p>
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-600 truncate leading-tight">
+                {user.email}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

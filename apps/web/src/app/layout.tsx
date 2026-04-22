@@ -47,7 +47,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-zinc-50 dark:bg-zinc-950`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-white dark:bg-zinc-950`}>
         <Providers>{children}</Providers>
       </body>
     </html>
