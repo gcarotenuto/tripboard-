@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@tripboard/shared", "@tripboard/ui"],
+  transpilePackages: ["@tripboard/shared", "@tripboard/ui", "@tripboard/parsing"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.amazonaws.com" },
