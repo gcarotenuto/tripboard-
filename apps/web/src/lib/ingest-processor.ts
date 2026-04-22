@@ -127,6 +127,9 @@ export async function processEmailInline(params: ProcessEmailParams): Promise<Pr
             data: {
               tripId,
               ...normalized,
+              details: typeof normalized.details === "object"
+                ? JSON.stringify(normalized.details)
+                : (normalized.details ?? "{}"),
               isDuplicate: dedup.isDuplicate,
               duplicateOfId: dedup.duplicateOfId ?? null,
             },

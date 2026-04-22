@@ -17,7 +17,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@tripboard/shared": ["../../packages/shared/src/index.ts"],
-      "@tripboard/ui": ["../../packages/ui/src/index.ts"]
+      "@tripboard/ui": ["../../packages/ui/src/index.ts"],
+      "@tripboard/parsing": ["../../packages/parsing/src/index.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

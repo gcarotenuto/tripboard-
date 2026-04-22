@@ -96,7 +96,16 @@ async function runExtractionAsync(
         for (const ev of extraction.events) {
           const normalized = normalizeExtractionEvent(ev, documentId, source);
           const dedup = checkDuplicate(normalized, existing as unknown as TripEvent[]);
-          await prisma.tripEvent.create({ data: { tripId, ...normalized, isDuplicate: dedup.isDuplicate, duplicateOfId: dedup.duplicateOfId ?? null } });
+          await prisma.tripEvent.create({
+            data: {
+              tripId, ...normalized,
+              details: typeof normalized.details === "object"
+                ? JSON.stringify(normalized.details)
+                : (normalized.details ?? "{}"),
+              isDuplicate: dedup.isDuplicate,
+              duplicateOfId: dedup.duplicateOfId ?? null,
+            },
+          });
         }
       }
 

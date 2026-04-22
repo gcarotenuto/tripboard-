@@ -17,12 +17,12 @@ export async function PATCH(
   if (!trip) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const event = await prisma.tripEvent.findFirst({
-    where: { id: params.eventId, tripId: params.tripId, deletedAt: null },
+    where: { id: params.eventId, tripId: params.tripId },
   });
   if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { title, startsAt, endsAt, locationName, details, notes, status } = body;
+  const { title, startsAt, endsAt, locationName, details, notes } = body;
 
   const updated = await prisma.tripEvent.update({
     where: { id: params.eventId },
@@ -31,9 +31,10 @@ export async function PATCH(
       ...(startsAt !== undefined && { startsAt: new Date(startsAt) }),
       ...(endsAt !== undefined && { endsAt: new Date(endsAt) }),
       ...(locationName !== undefined && { locationName }),
-      ...(details !== undefined && { details }),
+      ...(details !== undefined && {
+        details: typeof details === "object" ? JSON.stringify(details) : details,
+      }),
       ...(notes !== undefined && { notes }),
-      ...(status !== undefined && { status }),
     },
   });
 
@@ -54,14 +55,12 @@ export async function DELETE(
   if (!trip) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const event = await prisma.tripEvent.findFirst({
-    where: { id: params.eventId, tripId: params.tripId, deletedAt: null },
+    where: { id: params.eventId, tripId: params.tripId },
   });
   if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.tripEvent.update({
-    where: { id: params.eventId },
-    data: { deletedAt: new Date() },
-  });
+  // TripEvent has no deletedAt — hard delete
+  await prisma.tripEvent.delete({ where: { id: params.eventId } });
 
   return NextResponse.json({ data: { deleted: true } });
 }
