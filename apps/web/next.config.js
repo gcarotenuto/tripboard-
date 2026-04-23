@@ -19,7 +19,12 @@ const nextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
-  experimental: {},
+  experimental: {
+    // Prevent webpack from bundling these packages — let Node.js require them
+    // at runtime. @vercel/blob depends on undici which uses private class
+    // field syntax that Next.js 14 webpack cannot parse.
+    serverComponentsExternalPackages: ["@vercel/blob", "undici"],
+  },
 };
 
 module.exports = nextConfig;
