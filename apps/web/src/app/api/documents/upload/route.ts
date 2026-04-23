@@ -44,8 +44,9 @@ export async function POST(req: Request) {
     const result = await uploadFile(key, buffer, file.type);
     checksum = result.checksum;
   } catch (err) {
-    console.error("[upload] storage error:", err);
-    return NextResponse.json({ error: "Storage error. Check server logs." }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[upload] storage error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 
   const source = file.type === "text/calendar" ? "ICS_IMPORT"
