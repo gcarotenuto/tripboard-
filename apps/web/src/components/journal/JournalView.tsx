@@ -41,7 +41,7 @@ export function JournalView({ tripId }: { tripId: string }) {
   async function handleDelete(entry: JournalEntry) {
     if (!window.confirm("Delete this journal entry?")) return;
     await fetch(`/api/trips/${tripId}/journal/${entry.id}`, { method: "DELETE" });
-    mutate(`/api/trips/${tripId}/journal`);
+    mutate();
   }
 
   async function handleSave() {
@@ -58,7 +58,7 @@ export function JournalView({ tripId }: { tripId: string }) {
     });
     setSaving(false);
     closeEdit();
-    mutate(`/api/trips/${tripId}/journal`);
+    mutate();
   }
 
   if (isLoading) {

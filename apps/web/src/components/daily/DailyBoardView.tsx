@@ -86,7 +86,7 @@ export function DailyBoardView() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tripId: data.tripId, date: today, checklist: updated }),
     });
-    mutate(`/api/daily?date=${today}`);
+    mutate();
   }
 
   const toggleItem = (id: string) => {

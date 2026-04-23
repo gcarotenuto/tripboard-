@@ -110,6 +110,7 @@ export function Sidebar() {
     : "?";
 
   return (
+    <>
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950 py-5">
       {/* Logo */}
       <div className="px-4 mb-6">
@@ -202,5 +203,6 @@ export function Sidebar() {
     </aside>
 
     <SearchModal open={searchOpen} onClose={closeSearch} />
+    </>
   );
 }

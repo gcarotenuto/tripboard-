@@ -128,7 +128,7 @@ export function LogisticsView({ tripId }: { tripId: string }) {
   async function handleDelete(event: TripEvent) {
     if (!window.confirm("Delete this event?")) return;
     await fetch(`/api/trips/${tripId}/events/${event.id}`, { method: "DELETE" });
-    mutate(`/api/trips/${tripId}/events?view=LOGISTICS`);
+    mutate();
   }
 
   async function handleSave() {
@@ -147,7 +147,7 @@ export function LogisticsView({ tripId }: { tripId: string }) {
     });
     setSaving(false);
     closeEdit();
-    mutate(`/api/trips/${tripId}/events?view=LOGISTICS`);
+    mutate();
   }
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;

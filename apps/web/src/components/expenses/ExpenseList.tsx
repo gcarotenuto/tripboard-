@@ -60,7 +60,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
   async function handleDelete(expense: Expense) {
     if (!window.confirm("Delete this expense?")) return;
     await fetch(`/api/trips/${tripId}/expenses/${expense.id}`, { method: "DELETE" });
-    mutate(`/api/trips/${tripId}/expenses`);
+    mutate();
   }
 
   async function handleSave() {
@@ -80,7 +80,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     });
     setSaving(false);
     closeEdit();
-    mutate(`/api/trips/${tripId}/expenses`);
+    mutate();
   }
 
   // Derive available categories from loaded expenses
