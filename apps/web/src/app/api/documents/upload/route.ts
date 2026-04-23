@@ -39,7 +39,14 @@ export async function POST(req: Request) {
   const ext = file.name.split(".").pop() ?? "bin";
   const key = `users/${userId}/documents/${randomUUID()}.${ext}`;
 
-  const { checksum } = await uploadFile(key, buffer, file.type);
+  let checksum: string;
+  try {
+    const result = await uploadFile(key, buffer, file.type);
+    checksum = result.checksum;
+  } catch (err) {
+    console.error("[upload] storage error:", err);
+    return NextResponse.json({ error: "Storage error. Check server logs." }, { status: 500 });
+  }
 
   const source = file.type === "text/calendar" ? "ICS_IMPORT"
                : file.type.startsWith("image/") ? "IMAGE_UPLOAD"

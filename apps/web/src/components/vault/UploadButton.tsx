@@ -32,7 +32,8 @@ export function UploadButton({ tripId }: { tripId: string }) {
     });
 
     if (!res.ok) {
-      setError("Upload failed. Please try again.");
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Upload failed. Please try again.");
     }
 
     setUploading(false);
