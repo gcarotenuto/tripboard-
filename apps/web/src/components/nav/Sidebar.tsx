@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import { cn } from "@tripboard/ui";
 import {
@@ -16,7 +17,9 @@ import {
   CreditCard,
   ChevronRight,
   Plane,
+  Search,
 } from "lucide-react";
+import { SearchModal } from "@/components/search/SearchModal";
 
 const TOP_NAV = [
   { href: "/trips", label: "Trip Hub", Icon: Map },
@@ -84,6 +87,22 @@ export function Sidebar() {
   const { data: session } = useSession();
   const tripMatch = pathname.match(/^\/trips\/([a-f0-9-]{36})/);
   const activeTripId = tripMatch?.[1] ?? null;
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+
+  // Cmd+K / Ctrl+K global shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   const user = session?.user as { name?: string; email?: string } | undefined;
   const initials = user?.name
@@ -102,6 +121,20 @@ export function Sidebar() {
             TripBoard
           </span>
         </Link>
+      </div>
+
+      {/* Search button */}
+      <div className="px-2 mb-3">
+        <button
+          onClick={openSearch}
+          className="flex w-full items-center gap-3 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-400 dark:text-zinc-500 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+        >
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="inline-flex items-center rounded border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 text-[10px] font-medium">
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       {/* Nav */}
@@ -167,5 +200,7 @@ export function Sidebar() {
         )}
       </div>
     </aside>
+
+    <SearchModal open={searchOpen} onClose={closeSearch} />
   );
 }

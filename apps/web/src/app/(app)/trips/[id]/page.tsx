@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TripStats } from "@/components/trips/TripStats";
 import { QuickActions } from "@/components/trips/QuickActions";
-import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft } from "lucide-react";
+import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer } from "lucide-react";
 
 export const metadata: Metadata = { title: "Trip Overview" };
 
@@ -75,7 +75,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
           </span>
         </div>
 
-        <div className="relative mx-auto max-w-4xl px-6 py-8">
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 py-8">
           {/* Breadcrumb */}
           <Link
             href="/trips"
@@ -85,12 +85,12 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
             All trips
           </Link>
 
-          <div className="flex items-start justify-between gap-4">
-            <div>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset mb-3 ${badge.className}`}>
                 {badge.label}
               </span>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight break-words">
                 {trip.title}
               </h1>
               {(dateRange || destString) && (
@@ -108,7 +108,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-8">
         {/* Stats */}
         <TripStats tripId={params.id} />
 
@@ -140,6 +140,18 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
 
         {/* Quick actions */}
         <QuickActions tripId={params.id} />
+
+        {/* Export */}
+        <div className="flex justify-end pt-2">
+          <Link
+            href={`/trips/${params.id}/print`}
+            target="_blank"
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all"
+          >
+            <Printer className="h-4 w-4" />
+            Export PDF
+          </Link>
+        </div>
       </div>
     </div>
   );
