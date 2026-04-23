@@ -72,6 +72,16 @@ export async function POST(req: Request) {
   if (hasAiKey) {
     runExtractionAsync(document.id, ingestJob.id, buffer, file.name, file.type,
                        source as "pdf_upload"|"image_upload"|"ics_import", userId, tripId);
+  } else {
+    // No AI key — mark document as stored (no extraction), close the job
+    await prisma.document.update({
+      where: { id: document.id },
+      data: { status: "STORED" },
+    });
+    await prisma.ingestJob.update({
+      where: { id: ingestJob.id },
+      data: { status: "COMPLETED", completedAt: new Date(), documentsCreated: 1 },
+    });
   }
 
   return NextResponse.json({ data: document }, { status: 201 });

@@ -10,6 +10,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "primary" | "success" | "warning" | "danger" }> = {
   PENDING:    { label: "Queued",      variant: "warning" },
   PROCESSING: { label: "Extracting…", variant: "primary" },
+  STORED:     { label: "Stored",      variant: "default" },
   EXTRACTED:  { label: "Extracted",   variant: "success" },
   REVIEWED:   { label: "Verified",    variant: "success" },
   FAILED:     { label: "Failed",      variant: "danger" },

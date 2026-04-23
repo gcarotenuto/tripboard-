@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { mutate } from "swr";
 import { MAX_FILE_SIZE_BYTES, ACCEPTED_MIME_TYPES } from "@tripboard/shared";
 
 export function UploadButton({ tripId }: { tripId: string }) {
@@ -34,6 +35,11 @@ export function UploadButton({ tripId }: { tripId: string }) {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Upload failed. Please try again.");
+    } else {
+      // Revalidate the document list so the new file appears immediately
+      mutate(`/api/trips/${tripId}/documents`);
+      // Reset file input so the same file can be re-uploaded if needed
+      if (inputRef.current) inputRef.current.value = "";
     }
 
     setUploading(false);
