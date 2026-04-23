@@ -17,7 +17,7 @@ async function uploadToBlob(
   // Use "private" to match the Private blob store created in the dashboard.
   // Public access would require a Public store.
   const blob = await put(key, buffer, {
-    access: "public",
+    access: "private",
     contentType: mimeType,
     addRandomSuffix: false,
     token,
