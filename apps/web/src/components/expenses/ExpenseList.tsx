@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
-import { Trash2, Pencil, X } from "lucide-react";
-import type { Expense } from "@tripboard/shared";
+import { Trash2, Pencil, X, Search } from "lucide-react";
+import type { Expense, ExpenseCategory } from "@tripboard/shared";
 import { EXPENSE_CATEGORY_EMOJIS, EXPENSE_CATEGORY_LABELS, formatCurrency, formatDate } from "@tripboard/shared";
 import { Spinner } from "@tripboard/ui";
 
@@ -11,6 +11,11 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.
 
 const CURRENCIES = ["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "CAD", "MXN"] as const;
 const CATEGORIES = ["TRANSPORT", "ACCOMMODATION", "FOOD", "ACTIVITY", "SHOPPING", "HEALTH", "OTHER"] as const;
+
+type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
+
+const SELECT_CLASS =
+  "rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-400";
 
 interface EditForm {
   title: string;
@@ -30,6 +35,11 @@ export function ExpenseList({ tripId }: { tripId: string }) {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [form, setForm] = useState<EditForm>({ title: "", amount: "", currency: "EUR", category: "OTHER", date: "", notes: "" });
   const [saving, setSaving] = useState(false);
+
+  // Filter + sort state
+  const [filterCategory, setFilterCategory] = useState<string>("ALL");
+  const [sort, setSort] = useState<SortOption>("date-desc");
+  const [search, setSearch] = useState("");
 
   function openEdit(expense: Expense) {
     setEditingExpense(expense);
@@ -73,6 +83,36 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     mutate(`/api/trips/${tripId}/expenses`);
   }
 
+  // Derive available categories from loaded expenses
+  const availableCategories = useMemo<ExpenseCategory[]>(() => {
+    if (!expenses) return [];
+    const seen = new Set<ExpenseCategory>();
+    for (const e of expenses) seen.add(e.category);
+    return Array.from(seen).sort();
+  }, [expenses]);
+
+  // Apply filter + sort + search
+  const filteredExpenses = useMemo(() => {
+    if (!expenses) return [];
+    let list = expenses.slice();
+
+    if (filterCategory !== "ALL") {
+      list = list.filter((e) => e.category === filterCategory);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((e) => e.title.toLowerCase().includes(q));
+    }
+    list.sort((a, b) => {
+      if (sort === "date-desc") return new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (sort === "date-asc") return new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (sort === "amount-desc") return b.amount - a.amount;
+      if (sort === "amount-asc") return a.amount - b.amount;
+      return 0;
+    });
+    return list;
+  }, [expenses, filterCategory, sort, search]);
+
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
 
   if (!expenses?.length) {
@@ -86,8 +126,51 @@ export function ExpenseList({ tripId }: { tripId: string }) {
 
   return (
     <>
+      {/* Toolbar */}
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[140px]">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`${SELECT_CLASS} w-full pl-7`}
+          />
+        </div>
+
+        {/* Category filter */}
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className={SELECT_CLASS}
+        >
+          <option value="ALL">All categories</option>
+          {availableCategories.map((cat) => (
+            <option key={cat} value={cat}>{EXPENSE_CATEGORY_LABELS[cat]}</option>
+          ))}
+        </select>
+
+        {/* Sort */}
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortOption)}
+          className={SELECT_CLASS}
+        >
+          <option value="date-desc">Date (newest)</option>
+          <option value="date-asc">Date (oldest)</option>
+          <option value="amount-desc">Amount (high→low)</option>
+          <option value="amount-asc">Amount (low→high)</option>
+        </select>
+      </div>
+
+      {filteredExpenses.length === 0 && (
+        <p className="text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center">No expenses match your filters.</p>
+      )}
+
       <div className="space-y-2">
-        {expenses.map((expense) => (
+        {filteredExpenses.map((expense) => (
           <div
             key={expense.id}
             className="group flex items-center gap-3 rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3"

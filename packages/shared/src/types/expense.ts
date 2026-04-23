@@ -54,6 +54,8 @@ export interface ExpenseSummary {
   totalUsd: number;
   byCategory: Record<ExpenseCategory, number>;
   expenseCount: number;
+  paidCount: number;
+  unpaidCount: number;
 }
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
-import { Trash2, Pencil, X } from "lucide-react";
-import type { TripEvent } from "@tripboard/shared";
+import { Trash2, Pencil, X, Search } from "lucide-react";
+import type { TripEvent, EventType } from "@tripboard/shared";
 import {
   formatDate,
   formatTime,
@@ -78,6 +78,38 @@ export function LogisticsView({ tripId }: { tripId: string }) {
   const [form, setForm] = useState<EditForm>({ title: "", startsAt: "", endsAt: "", locationName: "", notes: "" });
   const [saving, setSaving] = useState(false);
 
+  // Filter state
+  const [filterType, setFilterType] = useState<EventType | "ALL">("ALL");
+  const [search, setSearch] = useState("");
+
+  // Derive event types present in data
+  const presentTypes = useMemo<EventType[]>(() => {
+    if (!events) return [];
+    const seen = new Set<EventType>();
+    for (const e of events) seen.add(e.type);
+    return Array.from(seen);
+  }, [events]);
+
+  // Filtered events
+  const filteredEvents = useMemo(() => {
+    if (!events) return [];
+    let list = events.slice();
+    if (filterType !== "ALL") {
+      list = list.filter((e) => e.type === filterType);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (e) =>
+          e.title.toLowerCase().includes(q) ||
+          (e.locationName ?? "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [events, filterType, search]);
+
+  const isFiltering = filterType !== "ALL" || search.trim().length > 0;
+
   function openEdit(event: TripEvent) {
     setEditingEvent(event);
     setForm({
@@ -136,13 +168,68 @@ export function LogisticsView({ tripId }: { tripId: string }) {
     </div>
   );
 
-  const grouped = groupEventsByDay(events as unknown as Array<{ startsAt: string | null; [key: string]: unknown }>);
+  const grouped = groupEventsByDay(filteredEvents as unknown as Array<{ startsAt: string | null; [key: string]: unknown }>);
   const sortedDays = Object.keys(grouped).sort();
 
   const needsAttention = events.filter(e => e.confidence !== null && e.confidence < 0.7);
 
   return (
     <>
+      {/* Filter toolbar */}
+      <div className="mb-5 space-y-3">
+        {/* Type chips */}
+        {presentTypes.length > 1 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilterType("ALL")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                filterType === "ALL"
+                  ? "bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-950/50 dark:border-indigo-700 dark:text-indigo-300"
+                  : "border-zinc-200 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600"
+              }`}
+            >
+              All
+            </button>
+            {presentTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(filterType === type ? "ALL" : type)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  filterType === type
+                    ? "bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-950/50 dark:border-indigo-700 dark:text-indigo-300"
+                    : "border-zinc-200 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600"
+                }`}
+              >
+                {EVENT_TYPE_EMOJIS[type]} {EVENT_TYPE_LABELS[type]}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Search */}
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search by title or location…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+        </div>
+
+        {/* Result count when filtering */}
+        {isFiltering && (
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            {filteredEvents.length} result{filteredEvents.length !== 1 ? "s" : ""}
+          </p>
+        )}
+      </div>
+
+      {isFiltering && filteredEvents.length === 0 && (
+        <p className="text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center">No events match your filters.</p>
+      )}
+
       <div className="space-y-6">
         {/* Needs attention banner */}
         {needsAttention.length > 0 && (

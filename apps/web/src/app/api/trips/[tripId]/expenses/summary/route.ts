@@ -22,6 +22,8 @@ export async function GET(_req: Request, { params }: { params: { tripId: string 
     acc[e.currency] = (acc[e.currency] ?? 0) + e.amount;
     return acc;
   }, {});
+  const paidCount = expenses.filter((e) => e.isPaid).length;
+  const unpaidCount = expenses.length - paidCount;
 
-  return NextResponse.json({ data: { totalUsd, totalByCurrency, byCategory, expenseCount: expenses.length } });
+  return NextResponse.json({ data: { totalUsd, totalByCurrency, byCategory, expenseCount: expenses.length, paidCount, unpaidCount } });
 }
