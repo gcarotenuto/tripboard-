@@ -34,6 +34,7 @@ model User {
   ingestTokens IngestToken[]
   ingestJobs   IngestJob[]
   auditLogs    AuditLog[]
+  tripMembers  TripMember[]
 
   @@index([email])
   @@map("users")
@@ -110,6 +111,8 @@ model Trip {
   ingestJobs  IngestJob[]
   places      TripPlace[]
   dailyBoards DailyBoard[]
+  packingList PackingList?
+  members     TripMember[]
 
   @@index([userId, status])
   @@map("trips")
@@ -347,6 +350,62 @@ model IngestToken {
 
   @@index([token])
   @@map("ingest_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PACKING LIST
+// ─────────────────────────────────────────────────────────────
+
+model PackingList {
+  id        String        @id @default(uuid())
+  tripId    String        @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  items     PackingItem[]
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("packing_lists")
+}
+
+model PackingItem {
+  id       String  @id @default(uuid())
+  listId   String
+  name     String
+  category String  @default("OTHER")
+  quantity Int     @default(1)
+  isPacked Boolean @default(false)
+  notes    String?
+  order    Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  list PackingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@map("packing_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// COLLABORATION
+// ─────────────────────────────────────────────────────────────
+
+model TripMember {
+  id        String   @id @default(uuid())
+  tripId    String
+  userId    String
+  role      String   @default("VIEWER")
+  invitedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@index([userId])
+  @@map("trip_members")
 }
 
 // ─────────────────────────────────────────────────────────────
