@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
+import { Sparkles, Loader2 } from "lucide-react";
 
 const STATUSES = ["PLANNING", "UPCOMING", "ACTIVE"] as const;
 
@@ -10,13 +11,33 @@ export function NewTripButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [form, setForm] = useState({
     title: "",
     destination: "",
+    description: "",
     status: "UPCOMING" as typeof STATUSES[number],
     startDate: "",
     endDate: "",
   });
+
+  const handleAiDescription = async () => {
+    if (!form.title.trim()) return;
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/describe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, destination: form.destination }),
+      });
+      const json = await res.json();
+      if (json.description) setForm((f) => ({ ...f, description: json.description }));
+    } catch {
+      // silently fail
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +49,7 @@ export function NewTripButton() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: form.title,
+        description: form.description.trim() || undefined,
         primaryDestination: form.destination || undefined,
         status: form.status,
         startsAt: form.startDate ? new Date(form.startDate).toISOString() : undefined,
@@ -39,7 +61,7 @@ export function NewTripButton() {
       const json = await res.json() as { data: { id: string } };
       await mutate("/api/trips"); // refresh trip list
       setOpen(false);
-      setForm({ title: "", destination: "", status: "UPCOMING", startDate: "", endDate: "" });
+      setForm({ title: "", destination: "", description: "", status: "UPCOMING", startDate: "", endDate: "" });
       router.push(`/trips/${json.data.id}`);
     }
     setLoading(false);
@@ -104,6 +126,35 @@ export function NewTripButton() {
                   value={form.destination}
                   onChange={(e) => setForm({ ...form, destination: e.target.value })}
                   className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Description + AI */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Description
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAiDescription}
+                    disabled={aiLoading || !form.title.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 transition-colors disabled:opacity-50"
+                  >
+                    {aiLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3" />
+                    )}
+                    {aiLoading ? "Generating…" : "AI write"}
+                  </button>
+                </div>
+                <textarea
+                  rows={2}
+                  placeholder="What's this trip about? (optional)"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                 />
               </div>
 

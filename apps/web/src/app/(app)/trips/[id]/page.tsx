@@ -9,6 +9,7 @@ import { QuickActions } from "@/components/trips/QuickActions";
 import { WeatherWidget } from "@/components/weather/WeatherWidget";
 import { CollaboratorsPanel } from "@/components/collaboration/CollaboratorsPanel";
 import { ShareButton } from "@/components/trips/ShareButton";
+import { TripActions } from "@/components/trips/TripActions";
 import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer, Calendar } from "lucide-react";
 
 export const metadata: Metadata = { title: "Trip Overview" };
@@ -101,7 +102,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
           </Link>
 
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset mb-3 ${badge.className}`}>
                 {badge.label}
               </span>
@@ -119,6 +120,17 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
                 </p>
               )}
             </div>
+            <TripActions
+              tripId={trip.id}
+              tripData={{
+                title: trip.title,
+                description: trip.description,
+                primaryDestination: trip.primaryDestination,
+                status: trip.status,
+                startsAt: trip.startsAt,
+                endsAt: trip.endsAt,
+              }}
+            />
           </div>
         </div>
       </div>
