@@ -9,7 +9,7 @@ import { QuickActions } from "@/components/trips/QuickActions";
 import { WeatherWidget } from "@/components/weather/WeatherWidget";
 import { CollaboratorsPanel } from "@/components/collaboration/CollaboratorsPanel";
 import { ShareButton } from "@/components/trips/ShareButton";
-import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer } from "lucide-react";
+import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer, Calendar } from "lucide-react";
 
 export const metadata: Metadata = { title: "Trip Overview" };
 
@@ -79,9 +79,13 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
     <div className="min-h-full">
       {/* Hero section */}
       <div className={`relative bg-gradient-to-b ${heroGradient} border-b border-zinc-200/60 dark:border-zinc-800 overflow-hidden`}>
+        {/* Animated ambient blob for ACTIVE trips */}
+        {trip.status === "ACTIVE" && (
+          <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-emerald-400/10 dark:bg-emerald-500/10 blur-3xl animate-hero-glow pointer-events-none" />
+        )}
         {/* Ghost text */}
         <div className="absolute inset-0 flex items-center justify-end pr-8 pointer-events-none overflow-hidden">
-          <span className="text-[8rem] font-black tracking-tighter text-zinc-900/[0.04] dark:text-zinc-100/[0.04] select-none leading-none">
+          <span className="text-[8rem] font-black tracking-tighter text-zinc-900/[0.04] dark:text-zinc-100/[0.04] select-none leading-none animate-hero-glow">
             {ghostText}
           </span>
         </div>
@@ -170,6 +174,14 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
             initialToken={trip.shareToken}
             initialPublic={trip.isPublic}
           />
+          <a
+            href={`/api/trips/${params.id}/ical`}
+            download
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all"
+          >
+            <Calendar className="h-4 w-4" />
+            Export iCal
+          </a>
           <Link
             href={`/trips/${params.id}/print`}
             target="_blank"

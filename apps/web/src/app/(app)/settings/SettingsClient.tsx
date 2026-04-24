@@ -1,16 +1,54 @@
 "use client";
 
+import { useState } from "react";
 import { signOut } from "next-auth/react";
 
 interface SettingsClientProps {
-  user: { name: string | null; email: string | null };
+  user: { name: string | null; email: string | null; preferences?: Record<string, unknown> };
 }
 
 const SECTION = "rounded-2xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 p-6";
 const LABEL = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5";
+const INPUT = "w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400";
 const INPUT_DISABLED = "w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 px-3 py-2.5 text-sm text-zinc-500 dark:text-zinc-400 cursor-not-allowed";
 
+const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF"];
+
 export function SettingsClient({ user }: SettingsClientProps) {
+  const [name, setName] = useState(user.name ?? "");
+  const [nameSaved, setNameSaved] = useState(false);
+  const [nameSaving, setNameSaving] = useState(false);
+
+  const defaultCurrencyInit = (user.preferences?.defaultCurrency as string) ?? "USD";
+  const [defaultCurrency, setDefaultCurrency] = useState(defaultCurrencyInit);
+  const [currencySaved, setCurrencySaved] = useState(false);
+
+  async function saveName() {
+    setNameSaving(true);
+    try {
+      await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 2000);
+    } finally {
+      setNameSaving(false);
+    }
+  }
+
+  async function saveCurrency(value: string) {
+    setDefaultCurrency(value);
+    await fetch("/api/user/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preferences: { defaultCurrency: value } }),
+    });
+    setCurrencySaved(true);
+    setTimeout(() => setCurrencySaved(false), 2000);
+  }
+
   return (
     <div className="space-y-6">
       {/* Profile section */}
@@ -19,12 +57,21 @@ export function SettingsClient({ user }: SettingsClientProps) {
         <div className="space-y-4">
           <div>
             <label className={LABEL}>Display name</label>
-            <input
-              type="text"
-              defaultValue={user.name ?? ""}
-              disabled
-              className={INPUT_DISABLED}
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={INPUT}
+              />
+              <button
+                onClick={saveName}
+                disabled={nameSaving}
+                className="shrink-0 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+              >
+                {nameSaved ? "Saved!" : nameSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
           <div>
             <label className={LABEL}>Email</label>
@@ -36,25 +83,30 @@ export function SettingsClient({ user }: SettingsClientProps) {
             />
           </div>
         </div>
-        <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">Profile editing coming soon.</p>
       </section>
 
       {/* Preferences */}
       <section className={SECTION}>
         <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Preferences</h3>
-        <div className="space-y-3">
-          {[
-            { label: "Default currency", value: "USD" },
-            { label: "Timezone", value: "UTC" },
-            { label: "Date format", value: "MM/DD/YYYY" },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-              <span className="text-sm text-zinc-700 dark:text-zinc-300">{label}</span>
-              <span className="text-sm text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-lg">{value}</span>
+        <div className="space-y-4">
+          <div>
+            <label className={LABEL}>Default currency</label>
+            <div className="flex items-center gap-3">
+              <select
+                value={defaultCurrency}
+                onChange={(e) => saveCurrency(e.target.value)}
+                className={`${INPUT} max-w-[160px]`}
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              {currencySaved && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Saved!</span>
+              )}
             </div>
-          ))}
+          </div>
         </div>
-        <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">Preference customization coming soon.</p>
       </section>
 
       {/* About / version */}

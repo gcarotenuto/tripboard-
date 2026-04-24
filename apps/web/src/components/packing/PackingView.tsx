@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { Trash2, Plus, Luggage } from "lucide-react";
 import { Spinner } from "@tripboard/ui";
@@ -147,6 +147,7 @@ const SELECT_CLASS =
 export function PackingView({ tripId }: { tripId: string }) {
   const apiKey = `/api/trips/${tripId}/packing`;
   const { data: list, isLoading } = useSWR<PackingList>(apiKey, fetcher);
+  const confettiFired = useRef(false);
 
   // Add-item form state
   const [newName, setNewName] = useState("");
@@ -179,7 +180,27 @@ export function PackingView({ tripId }: { tripId: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isPacked: !item.isPacked }),
     });
-    globalMutate(apiKey);
+    await globalMutate(apiKey);
+
+    // Confetti when ALL items are packed (fire only once per session)
+    const fresh = (await fetch(apiKey).then((r) => r.json()).catch(() => null))?.data;
+    if (fresh) {
+      const total = fresh.items.length;
+      const packed = fresh.items.filter((i: PackingItem) => i.isPacked).length;
+      if (total > 0 && packed === total && !confettiFired.current) {
+        confettiFired.current = true;
+        import("canvas-confetti").then(({ default: confetti }) => {
+          confetti({ particleCount: 160, spread: 80, origin: { y: 0.6 },
+            colors: ["#6366f1", "#8b5cf6", "#a78bfa", "#34d399", "#fbbf24"] });
+          setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55,
+            origin: { x: 0 }, colors: ["#6366f1", "#34d399"] }), 200);
+          setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55,
+            origin: { x: 1 }, colors: ["#f472b6", "#fbbf24"] }), 400);
+        });
+      }
+      // Reset confetti flag if user un-packs something
+      if (packed < total) confettiFired.current = false;
+    }
   }
 
   async function handleDelete(item: PackingItem) {

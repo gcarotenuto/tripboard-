@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import type { TripSummary } from "@tripboard/shared";
 import { formatDate, getTripDurationDays } from "@tripboard/shared";
 import { Spinner } from "@tripboard/ui";
 import { MapPin, Calendar, Wand2 } from "lucide-react";
+import { CoverUpload } from "@/components/trips/CoverUpload";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -154,14 +155,17 @@ export function TripGrid() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((trip) => <TripCard key={trip.id} trip={trip} />)}
+          {filtered.map((trip, i) => <TripCard key={trip.id} trip={trip} index={i} />)}
         </div>
       )}
     </>
   );
 }
 
-function TripCard({ trip }: { trip: TripSummary }) {
+function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(trip.coverImageUrl ?? null);
+  const cardRef = useRef<HTMLElement>(null);
+
   const duration =
     trip.startsAt && trip.endsAt
       ? getTripDurationDays(trip.startsAt, trip.endsAt)
@@ -169,20 +173,61 @@ function TripCard({ trip }: { trip: TripSummary }) {
 
   const gradient = getCardGradient(trip.primaryDestination, trip.status);
   const statusCfg = getStatusConfig(trip.status);
-
-  // Short ghost text from primary destination
   const ghostText = trip.primaryDestination?.split(",")[0]?.toUpperCase() ?? "";
+
+  // 3D tilt effect
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const { left, top, width, height } = card.getBoundingClientRect();
+    const x = (e.clientX - left) / width - 0.5;   // -0.5 to 0.5
+    const y = (e.clientY - top) / height - 0.5;
+    card.style.transform = `perspective(700px) rotateX(${-y * 7}deg) rotateY(${x * 7}deg) translateZ(4px)`;
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (cardRef.current) {
+      cardRef.current.style.transform = "";
+    }
+  }, []);
+
+  // Staggered entry: cap at 6 so later cards don't wait forever
+  const delay = Math.min(index, 5) * 70;
 
   return (
     <Link href={`/trips/${trip.id}`}>
-      <article className="group relative rounded-2xl border border-zinc-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden hover:shadow-xl hover:shadow-zinc-900/8 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+      <article
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ animationDelay: `${delay}ms` }}
+        className="trip-card-3d card-enter group relative rounded-2xl border border-zinc-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden cursor-pointer"
+      >
 
         {/* Card header */}
-        <div className={`relative h-36 bg-gradient-to-br ${gradient} overflow-hidden`}>
-          {/* Ghost destination text */}
-          <span className="absolute inset-0 flex items-center justify-center text-[4rem] font-black tracking-tighter text-zinc-900/[0.06] dark:text-zinc-100/[0.06] select-none overflow-hidden leading-none px-3 text-center">
-            {ghostText}
-          </span>
+        <div
+          className={`relative h-36 overflow-hidden transition-all duration-300 ${
+            coverImageUrl ? "" : `bg-gradient-to-br ${gradient}`
+          } ${trip.status === "ACTIVE" ? "animate-gradient-drift" : ""}`}
+          style={
+            coverImageUrl
+              ? { backgroundImage: `url(${coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+              : trip.status === "ACTIVE"
+              ? { backgroundImage: "linear-gradient(135deg, #10b981 0%, #0d9488 40%, #06b6d4 100%)", backgroundSize: "200% 200%" }
+              : undefined
+          }
+        >
+          {/* Ghost destination text — only when no cover image */}
+          {!coverImageUrl && (
+            <span className="absolute inset-0 flex items-center justify-center text-[4rem] font-black tracking-tighter text-zinc-900/[0.06] dark:text-white/[0.07] select-none overflow-hidden leading-none px-3 text-center">
+              {ghostText}
+            </span>
+          )}
+
+          {/* Shimmer on hover */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none overflow-hidden rounded-t-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+          </div>
 
           {/* Status indicator */}
           <div className="absolute top-3 left-3">
@@ -199,6 +244,15 @@ function TripCard({ trip }: { trip: TripSummary }) {
                 {statusCfg.label}
               </span>
             )}
+          </div>
+
+          {/* Cover upload button — visible on group hover */}
+          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            <CoverUpload
+              tripId={trip.id}
+              currentUrl={coverImageUrl}
+              onUpload={(url) => setCoverImageUrl(url)}
+            />
           </div>
         </div>
 
