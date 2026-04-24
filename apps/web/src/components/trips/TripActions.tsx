@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, Loader2, AlertTriangle, Archive } from "lucide-react";
 import { EditTripModal } from "./EditTripModal";
 
 interface TripActionsProps {
@@ -22,6 +22,19 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  const handleArchive = async () => {
+    setArchiving(true);
+    await fetch(`/api/trips/${tripId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "ARCHIVED" }),
+    });
+    setArchiving(false);
+    router.push("/archive");
+    router.refresh();
+  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -45,6 +58,15 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
         >
           <Pencil className="h-3 w-3" />
           Edit
+        </button>
+        <button
+          onClick={handleArchive}
+          disabled={archiving || tripData.status === "ARCHIVED"}
+          title="Archive trip"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/80 dark:border-zinc-700 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 hover:text-zinc-700 dark:hover:border-zinc-500 dark:hover:text-zinc-200 transition-all shadow-sm disabled:opacity-40"
+        >
+          {archiving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Archive className="h-3 w-3" />}
+          Archive
         </button>
         <button
           onClick={() => setDeleteOpen(true)}
