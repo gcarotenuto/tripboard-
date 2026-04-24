@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { SearchModal } from "@/components/search/SearchModal";
+import { NotificationToggle } from "@/components/pwa/NotificationToggle";
 
 const TOP_NAV = [
   { href: "/trips", label: "Trip Hub", Icon: Map },
@@ -179,7 +180,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom: Settings + User */}
+      {/* Bottom: Settings + Notifications + User */}
       <div className="px-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-0.5">
         <Link
           href="/settings"
@@ -188,6 +189,7 @@ export function Sidebar() {
           <Settings className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
           Settings
         </Link>
+        <NotificationToggle />
 
         {/* User profile + logout */}
         {user && (

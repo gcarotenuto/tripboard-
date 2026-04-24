@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TripSummary } from "@tripboard/shared";
 import { formatDate, getTripDurationDays } from "@tripboard/shared";
 import { Spinner } from "@tripboard/ui";
-import { MapPin, Calendar, Tag } from "lucide-react";
+import { MapPin, Calendar, Wand2 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -67,7 +68,23 @@ function getStatusConfig(status: string) {
 
 export function TripGrid() {
   const [filter, setFilter] = useState<StatusFilter>("All");
-  const { data: trips, isLoading, error } = useSWR<TripSummary[]>("/api/trips", fetcher);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const { data: trips, isLoading, error, mutate } = useSWR<TripSummary[]>("/api/trips", fetcher);
+  const router = useRouter();
+
+  const handleDemo = async () => {
+    setDemoLoading(true);
+    try {
+      const res = await fetch("/api/trips/demo", { method: "POST" });
+      const body = await res.json();
+      if (res.ok && body.data?.id) {
+        await mutate();
+        router.push(`/trips/${body.data.id}`);
+      }
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   const filtered = !trips
     ? []
@@ -122,6 +139,18 @@ export function TripGrid() {
           <p className="mt-2 text-sm text-zinc-400">
             {filter === "All" ? "Create your first trip to get started." : "Try a different filter."}
           </p>
+          {filter === "All" && trips?.length === 0 && (
+            <button
+              onClick={handleDemo}
+              disabled={demoLoading}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 px-5 py-2.5 text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-colors disabled:opacity-60"
+            >
+              {demoLoading
+                ? <><span className="h-4 w-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" /> Creating demo…</>
+                : <><Wand2 className="h-4 w-4" /> Try with a sample trip</>
+              }
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

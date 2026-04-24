@@ -23,7 +23,7 @@ const nextConfig = {
     // Prevent webpack from bundling these packages — let Node.js require them
     // at runtime. @vercel/blob depends on undici which uses private class
     // field syntax that Next.js 14 webpack cannot parse.
-    serverComponentsExternalPackages: ["@vercel/blob", "undici"],
+    serverComponentsExternalPackages: ["@vercel/blob", "undici", "web-push"],
   },
 };
 
