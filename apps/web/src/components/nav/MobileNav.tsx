@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@tripboard/ui";
-import { CalendarDays, Lock, BookOpen, CreditCard } from "lucide-react";
+import { CalendarDays, Lock, BookOpen, CreditCard, Luggage, MapPin } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/trips", label: "Trips", emoji: "🗺️" },
@@ -13,9 +13,11 @@ const NAV_ITEMS = [
 
 const TRIP_SECTIONS = [
   { href: "timeline", label: "Timeline", Icon: CalendarDays },
-  { href: "vault", label: "Vault", Icon: Lock },
-  { href: "journal", label: "Journal", Icon: BookOpen },
+  { href: "vault",    label: "Vault",    Icon: Lock },
+  { href: "journal",  label: "Journal",  Icon: BookOpen },
   { href: "expenses", label: "Expenses", Icon: CreditCard },
+  { href: "packing",  label: "Packing",  Icon: Luggage },
+  { href: "map",      label: "Map",      Icon: MapPin },
 ];
 
 export function MobileNav() {
@@ -27,16 +29,18 @@ export function MobileNav() {
   if (activeTripId) {
     return (
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 md:hidden">
-        {/* Trip section tabs */}
-        <div className="flex h-16 items-center justify-around">
+        <div className="flex h-16 items-center overflow-x-auto scrollbar-none">
           {/* Back to trips */}
           <Link
             href="/trips"
-            className="flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-500"
+            className="flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-500 shrink-0"
           >
             <span className="text-xl">🗺️</span>
             <span>Trips</span>
           </Link>
+
+          {/* Divider */}
+          <div className="h-8 w-px bg-zinc-200 dark:bg-zinc-800 shrink-0" />
 
           {TRIP_SECTIONS.map((section) => {
             const href = `/trips/${activeTripId}/${section.href}`;
@@ -46,7 +50,7 @@ export function MobileNav() {
                 key={section.href}
                 href={href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium transition-colors",
+                  "flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors shrink-0",
                   isActive
                     ? "text-indigo-600 dark:text-indigo-400"
                     : "text-zinc-500 dark:text-zinc-500"
