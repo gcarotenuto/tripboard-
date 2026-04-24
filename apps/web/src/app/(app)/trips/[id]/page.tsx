@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TripStats } from "@/components/trips/TripStats";
 import { QuickActions } from "@/components/trips/QuickActions";
+import { WeatherWidget } from "@/components/weather/WeatherWidget";
+import { CollaboratorsPanel } from "@/components/collaboration/CollaboratorsPanel";
 import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer } from "lucide-react";
 
 export const metadata: Metadata = { title: "Trip Overview" };
@@ -43,7 +45,9 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
 
-  const userId = (session.user as { id: string }).id;
+  const userId = (session.user as { id: string; name?: string; email?: string }).id;
+  const userName = (session.user as { name?: string }).name ?? null;
+  const userEmail = (session.user as { email?: string }).email ?? undefined;
   const trip = await prisma.trip.findFirst({
     where: { id: params.id, userId, deletedAt: null },
   });
@@ -112,6 +116,9 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
         {/* Stats */}
         <TripStats tripId={params.id} />
 
+        {/* Weather */}
+        <WeatherWidget tripId={params.id} />
+
         {/* Module nav */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">
@@ -140,6 +147,14 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
 
         {/* Quick actions */}
         <QuickActions tripId={params.id} />
+
+        {/* Collaborators */}
+        <CollaboratorsPanel
+          tripId={params.id}
+          isOwner={true}
+          ownerName={userName}
+          ownerEmail={userEmail}
+        />
 
         {/* Export */}
         <div className="flex justify-end pt-2">

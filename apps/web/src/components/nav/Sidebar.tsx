@@ -18,6 +18,8 @@ import {
   ChevronRight,
   Plane,
   Search,
+  Luggage,
+  MapPin,
 } from "lucide-react";
 import { SearchModal } from "@/components/search/SearchModal";
 
@@ -32,6 +34,8 @@ const TRIP_SECTIONS = [
   { href: "vault", label: "Vault", Icon: Lock },
   { href: "journal", label: "Journal", Icon: BookOpen },
   { href: "expenses", label: "Expenses", Icon: CreditCard },
+  { href: "packing", label: "Packing", Icon: Luggage },
+  { href: "map", label: "Map", Icon: MapPin },
 ];
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
