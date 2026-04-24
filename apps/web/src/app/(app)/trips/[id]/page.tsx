@@ -8,6 +8,7 @@ import { TripStats } from "@/components/trips/TripStats";
 import { QuickActions } from "@/components/trips/QuickActions";
 import { WeatherWidget } from "@/components/weather/WeatherWidget";
 import { CollaboratorsPanel } from "@/components/collaboration/CollaboratorsPanel";
+import { ShareButton } from "@/components/trips/ShareButton";
 import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer } from "lucide-react";
 
 export const metadata: Metadata = { title: "Trip Overview" };
@@ -50,6 +51,12 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
   const userEmail = (session.user as { email?: string }).email ?? undefined;
   const trip = await prisma.trip.findFirst({
     where: { id: params.id, userId, deletedAt: null },
+    select: {
+      id: true, title: true, description: true, status: true,
+      primaryDestination: true, destinations: true,
+      startsAt: true, endsAt: true,
+      isPublic: true, shareToken: true,
+    },
   });
   if (!trip) notFound();
 
@@ -156,8 +163,13 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
           ownerEmail={userEmail}
         />
 
-        {/* Export */}
-        <div className="flex justify-end pt-2">
+        {/* Share + Export */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <ShareButton
+            tripId={params.id}
+            initialToken={trip.shareToken}
+            initialPublic={trip.isPublic}
+          />
           <Link
             href={`/trips/${params.id}/print`}
             target="_blank"

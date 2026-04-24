@@ -99,6 +99,8 @@ model Trip {
   isArchived         Boolean   @default(false)
   archivedAt         DateTime?
   memoryCapsule      String?
+  isPublic           Boolean   @default(false)
+  shareToken         String?   @unique
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   deletedAt          DateTime?
