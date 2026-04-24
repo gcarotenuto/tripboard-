@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { cn } from "@tripboard/ui";
-import { CalendarDays, Lock, BookOpen, CreditCard, Luggage, MapPin } from "lucide-react";
+import { CalendarDays, Lock, BookOpen, CreditCard, Luggage, MapPin, LogOut } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/trips", label: "Trips", emoji: "🗺️" },
@@ -91,6 +92,13 @@ export function MobileNav() {
           </Link>
         );
       })}
+      <button
+        onClick={() => signOut({ callbackUrl: "/login" })}
+        className="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-500"
+      >
+        <LogOut className="h-5 w-5 text-zinc-400 dark:text-zinc-600" />
+        <span>Logout</span>
+      </button>
     </nav>
   );
 }

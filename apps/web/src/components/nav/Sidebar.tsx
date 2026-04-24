@@ -20,7 +20,9 @@ import {
   Search,
   Luggage,
   MapPin,
+  LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { SearchModal } from "@/components/search/SearchModal";
 
 const TOP_NAV = [
@@ -187,13 +189,13 @@ export function Sidebar() {
           Settings
         </Link>
 
-        {/* User profile */}
+        {/* User profile + logout */}
         {user && (
-          <div className="flex items-center gap-3 px-3 py-2 mt-1">
+          <div className="flex items-center gap-2 px-3 py-2 mt-1">
             <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shrink-0">
               <span className="text-[10px] font-bold text-white">{initials}</span>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 truncate leading-tight">
                 {user.name ?? "Traveler"}
               </p>
@@ -201,6 +203,13 @@ export function Sidebar() {
                 {user.email}
               </p>
             </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              title="Sign out"
+              className="shrink-0 p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/30 transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
           </div>
         )}
       </div>
