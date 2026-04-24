@@ -25,6 +25,7 @@ import {
 import { signOut } from "next-auth/react";
 import { SearchModal } from "@/components/search/SearchModal";
 import { NotificationToggle } from "@/components/pwa/NotificationToggle";
+import { ThemeToggle } from "@/components/pwa/ThemeToggle";
 
 const TOP_NAV = [
   { href: "/trips", label: "Trip Hub", Icon: Map },
@@ -189,6 +190,7 @@ export function Sidebar() {
           <Settings className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
           Settings
         </Link>
+        <ThemeToggle />
         <NotificationToggle />
 
         {/* User profile + logout */}

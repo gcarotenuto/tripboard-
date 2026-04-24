@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeTripStatus } from "@/lib/tripStatus";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -12,9 +13,6 @@ export async function GET(req: Request) {
   const statusParam = searchParams.get("status");
 
   const statuses = statusParam ? statusParam.split(",").map((s) => s.trim()) : null;
-
-  // For archive queries (COMPLETED / ARCHIVED), don't restrict on isArchived
-  // since completed trips naturally have isArchived=false until explicitly archived
   const isArchiveQuery = statuses?.some((s) => ["COMPLETED", "ARCHIVED"].includes(s));
 
   const trips = await prisma.trip.findMany({
@@ -26,6 +24,19 @@ export async function GET(req: Request) {
     },
     orderBy: { startsAt: "desc" },
   });
+
+  // Auto-update statuses that have drifted (fire-and-forget, best effort)
+  const updates: Promise<unknown>[] = [];
+  for (const trip of trips) {
+    const correct = computeTripStatus(trip.status, trip.startsAt, trip.endsAt);
+    if (correct !== trip.status) {
+      trip.status = correct; // mutate for immediate response correctness
+      updates.push(
+        prisma.trip.update({ where: { id: trip.id }, data: { status: correct } }).catch(() => {})
+      );
+    }
+  }
+  if (updates.length) await Promise.all(updates);
 
   const parsed = trips.map((t) => ({
     ...t,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { computeTripStatus } from "@/lib/tripStatus";
 
 // NOTE: web-push is imported lazily inside the handler to avoid
 // module-level VAPID validation during Next.js build's page-data collection.
@@ -27,6 +28,23 @@ export async function GET(req: Request) {
 
   const now = new Date();
 
+  // ── Step 1: auto-update all trip statuses ─────────────────────────────
+  const allTrips = await prisma.trip.findMany({
+    where: { deletedAt: null },
+    select: { id: true, status: true, startsAt: true, endsAt: true },
+  });
+  const statusUpdates = allTrips
+    .map((t) => ({ id: t.id, correct: computeTripStatus(t.status, t.startsAt, t.endsAt) }))
+    .filter(({ id: _id, correct }, i) => correct !== allTrips[i].status);
+  if (statusUpdates.length) {
+    await Promise.all(
+      statusUpdates.map(({ id, correct }) =>
+        prisma.trip.update({ where: { id }, data: { status: correct } }).catch(() => {})
+      )
+    );
+  }
+
+  // ── Step 2: send push reminders ───────────────────────────────────────
   // Find upcoming trips starting in 1 day or 7 days
   const inOneDay = new Date(now);
   inOneDay.setDate(inOneDay.getDate() + 1);

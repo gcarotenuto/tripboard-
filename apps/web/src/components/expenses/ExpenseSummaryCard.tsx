@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
 import type { ExpenseSummary, ExpenseCategory } from "@tripboard/shared";
 import { EXPENSE_CATEGORY_COLORS, EXPENSE_CATEGORY_LABELS, formatCurrency } from "@tripboard/shared";
+import { Target, Pencil, Check, X } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -35,6 +37,104 @@ function buildArcs(slices: { pct: number; color: string }[]): { dasharray: strin
     offset += dash;
   }
   return result;
+}
+
+function BudgetTracker({ tripId, totalUsd }: { tripId: string; totalUsd: number }) {
+  const { data: budget, mutate } = useSWR<{ budget: number | null; budgetCurrency: string }>(
+    `/api/trips/${tripId}/budget`,
+    fetcher
+  );
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  if (!budget) return null;
+
+  const save = async () => {
+    setSaving(true);
+    const parsed = parseFloat(val);
+    await fetch(`/api/trips/${tripId}/budget`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ budget: isNaN(parsed) ? null : parsed, budgetCurrency: "USD" }),
+    });
+    await mutate();
+    setSaving(false);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+        <p className="text-[10px] uppercase tracking-wide font-medium text-zinc-400 dark:text-zinc-500 mb-2 flex items-center gap-1">
+          <Target className="h-3 w-3" /> Budget (USD)
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            autoFocus
+            type="number"
+            placeholder="e.g. 3000"
+            defaultValue={budget.budget ?? ""}
+            onChange={(e) => setVal(e.target.value)}
+            className="flex-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <button onClick={save} disabled={saving} className="p-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+            <Check className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={() => setEditing(false)} className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!budget.budget) {
+    return (
+      <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+        <button
+          onClick={() => { setVal(""); setEditing(true); }}
+          className="flex items-center gap-1.5 text-xs text-zinc-400 dark:text-zinc-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+        >
+          <Target className="h-3.5 w-3.5" />
+          Set a budget
+        </button>
+      </div>
+    );
+  }
+
+  const pct = Math.min((totalUsd / budget.budget) * 100, 100);
+  const over = totalUsd > budget.budget;
+
+  return (
+    <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[10px] uppercase tracking-wide font-medium text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
+          <Target className="h-3 w-3" /> Budget
+        </p>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-semibold ${over ? "text-red-600 dark:text-red-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+            {formatCurrency(totalUsd, "USD")} / {formatCurrency(budget.budget, "USD")}
+          </span>
+          <button onClick={() => { setVal(String(budget.budget ?? "")); setEditing(true); }} className="p-0.5 text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors">
+            <Pencil className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${over ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className={`mt-1 text-[10px] ${over ? "text-red-500 dark:text-red-400" : "text-zinc-400 dark:text-zinc-500"}`}>
+        {over
+          ? `Over budget by ${formatCurrency(totalUsd - budget.budget, "USD")}`
+          : `${formatCurrency(budget.budget - totalUsd, "USD")} remaining (${Math.round(100 - pct)}%)`
+        }
+      </p>
+    </div>
+  );
 }
 
 export function ExpenseSummaryCard({ tripId }: { tripId: string }) {
@@ -157,6 +257,9 @@ export function ExpenseSummaryCard({ tripId }: { tripId: string }) {
           </div>
         </div>
       )}
+
+      {/* Budget tracker */}
+      <BudgetTracker tripId={tripId} totalUsd={summary.totalUsd} />
     </div>
   );
 }
