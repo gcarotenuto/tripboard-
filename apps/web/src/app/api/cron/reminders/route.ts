@@ -1,27 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import webpush from "web-push";
 
-// Configure VAPID
-if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT ?? "mailto:hello@tripboard.app",
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
-}
+// NOTE: web-push is imported lazily inside the handler to avoid
+// module-level VAPID validation during Next.js build's page-data collection.
 
 // GET /api/cron/reminders — called by Vercel Cron every day at 09:00 UTC
 export async function GET(req: Request) {
   // Verify cron secret to prevent unauthorized calls
   const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+  const vapidSubject = process.env.VAPID_SUBJECT ?? "mailto:hello@tripboard.app";
+
+  if (!vapidPublic || !vapidPrivate) {
     return NextResponse.json({ error: "VAPID keys not configured" }, { status: 500 });
   }
+
+  // Lazy import to avoid module-level side-effects during build
+  const webpush = (await import("web-push")).default;
+  webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
 
   const now = new Date();
 
@@ -33,16 +35,13 @@ export async function GET(req: Request) {
   inSevenDays.setDate(inSevenDays.getDate() + 7);
 
   const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
-  const dayEnd = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+  const dayEnd   = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
 
   const tripsStartingSoon = await prisma.trip.findMany({
     where: {
       deletedAt: null,
       status: { in: ["PLANNING", "UPCOMING"] },
-      startsAt: {
-        gte: dayStart(inOneDay),
-        lte: dayEnd(inSevenDays),
-      },
+      startsAt: { gte: dayStart(inOneDay), lte: dayEnd(inSevenDays) },
     },
     select: {
       id: true,
@@ -88,7 +87,7 @@ export async function GET(req: Request) {
         );
         sent++;
       } catch (err: unknown) {
-        // Remove stale subscriptions (410 Gone)
+        // Remove stale subscriptions (410 Gone / 404 Not Found)
         const status = (err as { statusCode?: number })?.statusCode;
         if (status === 410 || status === 404) {
           await prisma.pushSubscription.deleteMany({ where: { endpoint: sub.endpoint } });
