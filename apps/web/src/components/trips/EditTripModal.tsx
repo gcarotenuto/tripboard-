@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X, Sparkles, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 const STATUSES = ["PLANNING", "UPCOMING", "ACTIVE", "COMPLETED"] as const;
 type TripStatus = typeof STATUSES[number];
@@ -38,6 +39,7 @@ function toInputDate(d: Date | null | undefined): string {
 
 export function EditTripModal({ tripId, initialData, open, onClose }: EditTripModalProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [form, setForm] = useState({
     title: initialData.title,
     description: initialData.description ?? "",
@@ -108,6 +110,7 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
     });
 
     if (res.ok) {
+      toast("Trip updated successfully");
       onClose();
       router.refresh();
     } else {

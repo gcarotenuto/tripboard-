@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { mutate } from "swr";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 type State = "idle" | "loading" | "done" | "error";
 
@@ -12,6 +13,7 @@ interface AiPackingButtonProps {
 }
 
 export function AiPackingButton({ tripId, onDone }: AiPackingButtonProps) {
+  const { toast } = useToast();
   const [state, setState] = useState<State>("idle");
   const [count, setCount] = useState(0);
 
@@ -23,6 +25,7 @@ export function AiPackingButton({ tripId, onDone }: AiPackingButtonProps) {
       const json = await res.json() as { data: { count: number } };
       setCount(json.data.count);
       setState("done");
+      toast(`🧳 ${json.data.count} packing items added`);
       // Invalidate SWR cache so PackingView re-fetches
       await mutate(`/api/trips/${tripId}/packing`);
       onDone?.(json.data.count);

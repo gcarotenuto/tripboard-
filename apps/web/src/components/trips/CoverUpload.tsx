@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ImagePlus } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface CoverUploadProps {
   tripId: string;
@@ -10,6 +11,7 @@ interface CoverUploadProps {
 }
 
 export function CoverUpload({ tripId, onUpload }: CoverUploadProps) {
+  const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,7 @@ export function CoverUpload({ tripId, onUpload }: CoverUploadProps) {
       }
 
       onUpload(body.data.coverImageUrl);
+      toast("Cover photo updated");
     } catch {
       setError("Upload failed");
     } finally {

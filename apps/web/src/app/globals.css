@@ -114,6 +114,16 @@
   animation: cardEnter 0.4s ease-out forwards;
 }
 
+/* Toast slide-up + fade */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @layer components {
   .timeline-line {
     @apply absolute left-0 top-0 bottom-0 w-px bg-zinc-200 dark:bg-zinc-800;

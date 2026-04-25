@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 type State = "idle" | "loading" | "done" | "error";
 
 export function AiItineraryButton({ tripId }: { tripId: string }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [state, setState] = useState<State>("idle");
   const [count, setCount] = useState(0);
 
@@ -22,6 +24,7 @@ export function AiItineraryButton({ tripId }: { tripId: string }) {
       const json = await res.json() as { data: { count: number } };
       setCount(json.data.count);
       setState("done");
+      toast(`✨ ${json.data.count} events added to your timeline`);
     } catch {
       setState("error");
     }
