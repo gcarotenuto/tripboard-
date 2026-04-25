@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import type { Document } from "@tripboard/shared";
 import { DOCUMENT_TYPE_EMOJIS, DOCUMENT_TYPE_LABELS, formatFileSize, formatDate } from "@tripboard/shared";
-import { Badge, Spinner } from "@tripboard/ui";
+import { Badge } from "@tripboard/ui";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -61,7 +61,20 @@ export function DocumentVault({ tripId }: { tripId: string }) {
     fetcher
   );
 
-  if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
+  if (isLoading) return (
+    <div className="space-y-3 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-4 flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 w-48 bg-zinc-200 dark:bg-zinc-700 rounded" />
+            <div className="h-3 w-32 bg-zinc-100 dark:bg-zinc-800 rounded" />
+          </div>
+          <div className="h-5 w-16 rounded-full bg-zinc-100 dark:bg-zinc-800 shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
 
   if (error) return (
     <p className="text-sm text-red-500 text-center py-8">Failed to load documents.</p>

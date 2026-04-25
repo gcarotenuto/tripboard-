@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { Trash2, Plus, Luggage } from "lucide-react";
-import { Spinner } from "@tripboard/ui";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -249,8 +248,29 @@ export function PackingView({ tripId }: { tripId: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Spinner />
+      <div className="space-y-4 animate-pulse">
+        {/* Progress bar skeleton */}
+        <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-700 rounded" />
+            <div className="h-3 w-16 bg-zinc-100 dark:bg-zinc-800 rounded" />
+          </div>
+          <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800" />
+        </div>
+        {/* Items skeleton */}
+        {["CLOTHING", "DOCUMENTS", "ELECTRONICS"].map((cat) => (
+          <div key={cat} className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+            <div className="h-3.5 w-20 bg-zinc-200 dark:bg-zinc-700 rounded mb-3" />
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 py-1.5">
+                  <div className="h-4 w-4 rounded bg-zinc-100 dark:bg-zinc-800" />
+                  <div className="h-3 flex-1 bg-zinc-100 dark:bg-zinc-800 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

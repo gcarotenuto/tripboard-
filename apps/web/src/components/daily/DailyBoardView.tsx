@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { Plus, Sparkles, Loader2 } from "lucide-react";
-import { Spinner } from "@tripboard/ui";
+import { useToast } from "@/components/ui/Toast";
 
 interface ChecklistItem {
   id: string;
@@ -72,6 +72,7 @@ export function DailyBoardView() {
     fetcher
   );
 
+  const { toast } = useToast();
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState("");
   const [generatingBriefing, setGeneratingBriefing] = useState(false);
@@ -93,7 +94,7 @@ export function DailyBoardView() {
         await mutate();
       }
     } catch {
-      // silently fail
+      toast("Couldn't generate briefing — try again", "error");
     } finally {
       setGeneratingBriefing(false);
     }
@@ -134,7 +135,31 @@ export function DailyBoardView() {
 
   const doneCount = items.filter((i) => i.done).length;
 
-  if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
+  if (isLoading) return (
+    <div className="space-y-6 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="h-6 w-32 rounded-full bg-indigo-100 dark:bg-indigo-900/40" />
+        <div className="h-3 w-28 bg-zinc-100 dark:bg-zinc-800 rounded" />
+      </div>
+      <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 p-5">
+        <div className="h-3 w-28 bg-indigo-200 dark:bg-indigo-900/60 rounded mb-3" />
+        <div className="space-y-2">
+          <div className="h-3 w-full bg-indigo-100 dark:bg-indigo-900/30 rounded" />
+          <div className="h-3 w-4/5 bg-indigo-100 dark:bg-indigo-900/30 rounded" />
+          <div className="h-3 w-3/5 bg-indigo-100 dark:bg-indigo-900/30 rounded" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="h-3 w-32 bg-zinc-200 dark:bg-zinc-700 rounded" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
+            <div className="h-5 w-5 rounded bg-zinc-100 dark:bg-zinc-800 shrink-0" />
+            <div className="h-3 flex-1 bg-zinc-100 dark:bg-zinc-800 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   if (!data) {
     return (

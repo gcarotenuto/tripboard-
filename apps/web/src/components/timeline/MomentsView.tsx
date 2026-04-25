@@ -3,7 +3,6 @@
 import useSWR from "swr";
 import type { TripEvent, JournalEntry } from "@tripboard/shared";
 import { formatDate, EVENT_TYPE_EMOJIS } from "@tripboard/shared";
-import { Spinner } from "@tripboard/ui";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -30,7 +29,26 @@ export function MomentsView({ tripId }: { tripId: string }) {
 
   const isLoading = eventsLoading || journalLoading;
 
-  if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
+  if (isLoading) return (
+    <div className="space-y-10 animate-pulse">
+      {[1, 2].map((day) => (
+        <div key={day}>
+          <div className="h-3 w-28 bg-zinc-200 dark:bg-zinc-700 rounded mb-4" />
+          <div className="space-y-3 pl-4 border-l-2 border-zinc-100 dark:border-zinc-800">
+            {[1, 2].map((i) => (
+              <div key={i} className="rounded-xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 flex gap-3">
+                <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 w-36 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                  <div className="h-3 w-24 bg-zinc-100 dark:bg-zinc-800 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   // Build unified stream
   const stream: MomentItem[] = [

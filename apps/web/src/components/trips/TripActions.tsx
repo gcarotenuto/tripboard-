@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Loader2, AlertTriangle, Archive, Copy } from "lucide-react";
 import { EditTripModal } from "./EditTripModal";
+import { useToast } from "@/components/ui/Toast";
 
 interface TripActionsProps {
   tripId: string;
@@ -20,6 +21,7 @@ interface TripActionsProps {
 
 export function TripActions({ tripId, tripData }: TripActionsProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -28,34 +30,59 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
 
   const handleDuplicate = async () => {
     setDuplicating(true);
-    const res = await fetch(`/api/trips/${tripId}/duplicate`, { method: "POST" });
-    if (res.ok) {
-      const json = await res.json() as { data: { id: string } };
-      router.push(`/trips/${json.data.id}`);
-      router.refresh();
+    try {
+      const res = await fetch(`/api/trips/${tripId}/duplicate`, { method: "POST" });
+      if (res.ok) {
+        const json = await res.json() as { data: { id: string } };
+        toast("Trip duplicated successfully");
+        router.push(`/trips/${json.data.id}`);
+        router.refresh();
+      } else {
+        toast("Failed to duplicate trip", "error");
+      }
+    } catch {
+      toast("Failed to duplicate trip", "error");
+    } finally {
+      setDuplicating(false);
     }
-    setDuplicating(false);
   };
 
   const handleArchive = async () => {
     setArchiving(true);
-    await fetch(`/api/trips/${tripId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "ARCHIVED" }),
-    });
-    setArchiving(false);
-    router.push("/archive");
-    router.refresh();
+    try {
+      const res = await fetch(`/api/trips/${tripId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ARCHIVED" }),
+      });
+      if (res.ok) {
+        toast("Trip archived");
+        router.push("/archive");
+        router.refresh();
+      } else {
+        toast("Failed to archive trip", "error");
+      }
+    } catch {
+      toast("Failed to archive trip", "error");
+    } finally {
+      setArchiving(false);
+    }
   };
 
   const handleDelete = async () => {
     setDeleting(true);
-    const res = await fetch(`/api/trips/${tripId}`, { method: "DELETE" });
-    if (res.ok) {
-      router.push("/trips");
-      router.refresh();
-    } else {
+    try {
+      const res = await fetch(`/api/trips/${tripId}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/trips");
+        router.refresh();
+      } else {
+        toast("Failed to delete trip", "error");
+        setDeleting(false);
+        setDeleteOpen(false);
+      }
+    } catch {
+      toast("Failed to delete trip", "error");
       setDeleting(false);
       setDeleteOpen(false);
     }

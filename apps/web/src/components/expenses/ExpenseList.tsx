@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
-import { Trash2, Pencil, X, Search } from "lucide-react";
+import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
 import type { Expense, ExpenseCategory } from "@tripboard/shared";
 import { EXPENSE_CATEGORY_EMOJIS, EXPENSE_CATEGORY_LABELS, formatCurrency, formatDate } from "@tripboard/shared";
-import { Spinner } from "@tripboard/ui";
+import { useToast } from "@/components/ui/Toast";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -17,6 +17,9 @@ type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 const SELECT_CLASS =
   "rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-400";
 
+const INPUT_CLASS =
+  "w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+
 interface EditForm {
   title: string;
   amount: string;
@@ -26,15 +29,39 @@ interface EditForm {
   notes: string;
 }
 
+function ExpenseSkeleton() {
+  return (
+    <div className="space-y-2 animate-pulse">
+      <div className="flex gap-2 mb-4">
+        <div className="h-8 flex-1 rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+        <div className="h-8 w-32 rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+        <div className="h-8 w-32 rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+      </div>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center gap-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
+          <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3.5 w-36 bg-zinc-200 dark:bg-zinc-700 rounded" />
+            <div className="h-3 w-24 bg-zinc-100 dark:bg-zinc-800 rounded" />
+          </div>
+          <div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-700 rounded shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ExpenseList({ tripId }: { tripId: string }) {
   const { data: expenses, isLoading, mutate } = useSWR<Expense[]>(
     `/api/trips/${tripId}/expenses`,
     fetcher
   );
+  const { toast } = useToast();
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [form, setForm] = useState<EditForm>({ title: "", amount: "", currency: "EUR", category: "OTHER", date: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filter + sort state
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
@@ -58,29 +85,49 @@ export function ExpenseList({ tripId }: { tripId: string }) {
   }
 
   async function handleDelete(expense: Expense) {
-    if (!window.confirm("Delete this expense?")) return;
-    await fetch(`/api/trips/${tripId}/expenses/${expense.id}`, { method: "DELETE" });
-    mutate();
+    setDeletingId(null);
+    try {
+      await fetch(`/api/trips/${tripId}/expenses/${expense.id}`, { method: "DELETE" });
+      mutate();
+      toast("Expense deleted");
+    } catch {
+      toast("Failed to delete expense", "error");
+    }
   }
 
   async function handleSave() {
     if (!editingExpense) return;
+    if (!form.title.trim()) {
+      toast("Title is required", "error");
+      return;
+    }
+    const amount = parseFloat(form.amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast("Enter a valid amount greater than 0", "error");
+      return;
+    }
     setSaving(true);
-    await fetch(`/api/trips/${tripId}/expenses/${editingExpense.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title,
-        amount: parseFloat(form.amount),
-        currency: form.currency,
-        category: form.category,
-        date: form.date,
-        notes: form.notes || null,
-      }),
-    });
-    setSaving(false);
-    closeEdit();
-    mutate();
+    try {
+      await fetch(`/api/trips/${tripId}/expenses/${editingExpense.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          amount,
+          currency: form.currency,
+          category: form.category,
+          date: form.date,
+          notes: form.notes || null,
+        }),
+      });
+      closeEdit();
+      mutate();
+      toast("Expense updated");
+    } catch {
+      toast("Failed to save expense", "error");
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Derive available categories from loaded expenses
@@ -95,7 +142,6 @@ export function ExpenseList({ tripId }: { tripId: string }) {
   const filteredExpenses = useMemo(() => {
     if (!expenses) return [];
     let list = expenses.slice();
-
     if (filterCategory !== "ALL") {
       list = list.filter((e) => e.category === filterCategory);
     }
@@ -113,13 +159,16 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     return list;
   }, [expenses, filterCategory, sort, search]);
 
-  if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
+  if (isLoading) return <ExpenseSkeleton />;
 
   if (!expenses?.length) {
     return (
       <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-10 text-center">
         <div className="text-4xl mb-3">💳</div>
-        <p className="text-sm text-zinc-500">No expenses recorded yet.</p>
+        <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-1">No expenses yet</h3>
+        <p className="text-sm text-zinc-500">
+          Tap <strong>+ Add Expense</strong> to start tracking your spending.
+        </p>
       </div>
     );
   }
@@ -190,20 +239,43 @@ export function ExpenseList({ tripId }: { tripId: string }) {
               {formatCurrency(expense.amount, expense.currency)}
             </span>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button
-                onClick={() => openEdit(expense)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-950/40 transition-colors"
-                title="Edit expense"
-              >
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => handleDelete(expense)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-colors"
-                title="Delete expense"
-              >
-                <Trash2 size={14} />
-              </button>
+              {deletingId === expense.id ? (
+                /* Inline confirmation */
+                <div className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-2.5 py-1">
+                  <AlertTriangle size={12} className="text-red-500 shrink-0" />
+                  <span className="text-xs font-medium text-red-700 dark:text-red-400">Delete?</span>
+                  <button
+                    onClick={() => handleDelete(expense)}
+                    className="text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <span className="text-red-300 dark:text-red-800">·</span>
+                  <button
+                    onClick={() => setDeletingId(null)}
+                    className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => openEdit(expense)}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-950/40 transition-colors"
+                    title="Edit expense"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => setDeletingId(expense.id)}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-colors"
+                    title="Delete expense"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -222,29 +294,32 @@ export function ExpenseList({ tripId }: { tripId: string }) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1">Title</label>
+                <label className="block text-xs font-medium text-zinc-500 mb-1">Title <span className="text-red-400">*</span></label>
                 <input
-                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={INPUT_CLASS}
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g. Dinner at restaurant"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-500 mb-1">Amount</label>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1">Amount <span className="text-red-400">*</span></label>
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    min="0.01"
+                    className={INPUT_CLASS}
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    placeholder="0.00"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-zinc-500 mb-1">Currency</label>
                   <select
-                    className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className={INPUT_CLASS}
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
                   >
@@ -256,11 +331,11 @@ export function ExpenseList({ tripId }: { tripId: string }) {
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1">Category</label>
                 <select
-                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={INPUT_CLASS}
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                 >
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{EXPENSE_CATEGORY_LABELS[c as ExpenseCategory] ?? c}</option>)}
                 </select>
               </div>
 
@@ -268,7 +343,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
                 <label className="block text-xs font-medium text-zinc-500 mb-1">Date</label>
                 <input
                   type="date"
-                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={INPUT_CLASS}
                   value={form.date}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
                 />
@@ -278,9 +353,10 @@ export function ExpenseList({ tripId }: { tripId: string }) {
                 <label className="block text-xs font-medium text-zinc-500 mb-1">Notes</label>
                 <textarea
                   rows={2}
-                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className={`${INPUT_CLASS} resize-none`}
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  placeholder="Optional notes…"
                 />
               </div>
             </div>
@@ -294,10 +370,10 @@ export function ExpenseList({ tripId }: { tripId: string }) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || !form.title.trim() || !form.amount}
                 className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
-                {saving ? "Saving…" : "Save"}
+                {saving ? "Saving…" : "Save changes"}
               </button>
             </div>
           </div>

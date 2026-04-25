@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
-import { Trash2, Pencil, X, Search } from "lucide-react";
+import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
 import type { TripEvent, EventType } from "@tripboard/shared";
 import {
   formatDate,
@@ -11,7 +11,34 @@ import {
   EVENT_TYPE_EMOJIS,
   EVENT_TYPE_LABELS,
 } from "@tripboard/shared";
-import { Spinner } from "@tripboard/ui";
+import { useToast } from "@/components/ui/Toast";
+
+function LogisticsSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="flex gap-2">
+        {[1,2,3].map(i => <div key={i} className="h-7 w-20 rounded-full bg-zinc-100 dark:bg-zinc-800" />)}
+      </div>
+      {[1, 2].map((day) => (
+        <div key={day}>
+          <div className="h-3 w-28 bg-zinc-200 dark:bg-zinc-700 rounded mb-3" />
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
+                <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 w-40 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                  <div className="h-3 w-24 bg-zinc-100 dark:bg-zinc-800 rounded" />
+                </div>
+                <div className="h-3 w-12 bg-zinc-100 dark:bg-zinc-800 rounded shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -74,9 +101,11 @@ export function LogisticsView({ tripId }: { tripId: string }) {
     fetcher
   );
 
+  const { toast } = useToast();
   const [editingEvent, setEditingEvent] = useState<TripEvent | null>(null);
   const [form, setForm] = useState<EditForm>({ title: "", startsAt: "", endsAt: "", locationName: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filter state
   const [filterType, setFilterType] = useState<EventType | "ALL">("ALL");
@@ -126,31 +155,46 @@ export function LogisticsView({ tripId }: { tripId: string }) {
   }
 
   async function handleDelete(event: TripEvent) {
-    if (!window.confirm("Delete this event?")) return;
-    await fetch(`/api/trips/${tripId}/events/${event.id}`, { method: "DELETE" });
-    mutate();
+    setDeletingId(null);
+    try {
+      await fetch(`/api/trips/${tripId}/events/${event.id}`, { method: "DELETE" });
+      mutate();
+      toast("Event deleted");
+    } catch {
+      toast("Failed to delete event", "error");
+    }
   }
 
   async function handleSave() {
     if (!editingEvent) return;
+    if (!form.title.trim()) {
+      toast("Title is required", "error");
+      return;
+    }
     setSaving(true);
-    await fetch(`/api/trips/${tripId}/events/${editingEvent.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title,
-        startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
-        endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
-        locationName: form.locationName || null,
-        notes: form.notes || null,
-      }),
-    });
-    setSaving(false);
-    closeEdit();
-    mutate();
+    try {
+      await fetch(`/api/trips/${tripId}/events/${editingEvent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+          endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+          locationName: form.locationName || null,
+          notes: form.notes || null,
+        }),
+      });
+      closeEdit();
+      mutate();
+      toast("Event updated");
+    } catch {
+      toast("Failed to save event", "error");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
+  if (isLoading) return <LogisticsSkeleton />;
 
   if (error) return (
     <div className="rounded-2xl bg-red-50 dark:bg-red-950/20 p-6 text-center">
@@ -305,20 +349,32 @@ export function LogisticsView({ tripId }: { tripId: string }) {
                           </p>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => openEdit(event)}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-950/40 transition-colors"
-                            title="Edit event"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(event)}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-colors"
-                            title="Delete event"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {deletingId === event.id ? (
+                            <div className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-2 py-1">
+                              <AlertTriangle size={11} className="text-red-500 shrink-0" />
+                              <span className="text-xs font-medium text-red-700 dark:text-red-400">Delete?</span>
+                              <button onClick={() => handleDelete(event)} className="text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">Yes</button>
+                              <span className="text-red-300 dark:text-red-800">·</span>
+                              <button onClick={() => setDeletingId(null)} className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">No</button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => openEdit(event)}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-950/40 transition-colors"
+                                title="Edit event"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => setDeletingId(event.id)}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-colors"
+                                title="Delete event"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -412,7 +468,7 @@ export function LogisticsView({ tripId }: { tripId: string }) {
                 disabled={saving}
                 className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
-                {saving ? "Saving…" : "Save"}
+                {saving ? "Saving…" : "Save changes"}
               </button>
             </div>
           </div>

@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 import { Sparkles, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 const STATUSES = ["PLANNING", "UPCOMING", "ACTIVE"] as const;
 
 export function NewTripButton() {
   const router = useRouter();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -33,7 +35,7 @@ export function NewTripButton() {
       const json = await res.json();
       if (json.description) setForm((f) => ({ ...f, description: json.description }));
     } catch {
-      // silently fail
+      toast("Couldn't generate description — try again", "error");
     } finally {
       setAiLoading(false);
     }
@@ -42,6 +44,11 @@ export function NewTripButton() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
+    // Date validation
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      toast("End date must be after start date", "error");
+      return;
+    }
     setLoading(true);
 
     const res = await fetch("/api/trips", {
@@ -63,6 +70,8 @@ export function NewTripButton() {
       setOpen(false);
       setForm({ title: "", destination: "", description: "", status: "UPCOMING", startDate: "", endDate: "" });
       router.push(`/trips/${json.data.id}`);
+    } else {
+      toast("Failed to create trip — please try again", "error");
     }
     setLoading(false);
   };
@@ -201,6 +210,7 @@ export function NewTripButton() {
                   <input
                     type="date"
                     value={form.endDate}
+                    min={form.startDate || undefined}
                     onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                     className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
