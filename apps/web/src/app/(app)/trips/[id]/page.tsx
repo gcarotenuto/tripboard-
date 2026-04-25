@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TripStats } from "@/components/trips/TripStats";
+import { TodayAgenda } from "@/components/trips/TodayAgenda";
 import { QuickActions } from "@/components/trips/QuickActions";
 import { WeatherWidget } from "@/components/weather/WeatherWidget";
 import { CollaboratorsPanel } from "@/components/collaboration/CollaboratorsPanel";
@@ -154,6 +155,9 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-8">
         {/* Stats */}
         <TripStats tripId={params.id} />
+
+        {/* Today's Agenda — only visible on ACTIVE trips */}
+        <TodayAgenda tripId={params.id} tripStatus={trip.status} />
 
         {/* Weather */}
         <WeatherWidget tripId={params.id} />
