@@ -12,6 +12,7 @@ import { CollaboratorsPanel } from "@/components/collaboration/CollaboratorsPane
 import { ShareButton } from "@/components/trips/ShareButton";
 import { TripActions } from "@/components/trips/TripActions";
 import { AiItineraryButton } from "@/components/trips/AiItineraryButton";
+import { AiPackingButton } from "@/components/packing/AiPackingButton";
 import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer, Calendar } from "lucide-react";
 
 export const metadata: Metadata = { title: "Trip Overview" };
@@ -214,19 +215,30 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
           </div>
         </div>
 
-        {/* AI Itinerary */}
+        {/* AI Assistant */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">
             AI Assistant
           </p>
-          <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-gradient-to-r from-indigo-50/60 to-violet-50/60 dark:from-indigo-950/20 dark:to-violet-950/20 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Generate itinerary</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Let AI plan your day-by-day schedule based on your destination.
-              </p>
+          <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-gradient-to-r from-indigo-50/60 to-violet-50/60 dark:from-indigo-950/20 dark:to-violet-950/20 divide-y divide-indigo-100/60 dark:divide-indigo-900/40 overflow-hidden">
+            <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Generate itinerary</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  AI plans your day-by-day schedule based on your destination.
+                </p>
+              </div>
+              <AiItineraryButton tripId={params.id} />
             </div>
-            <AiItineraryButton tripId={params.id} />
+            <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Suggest packing list</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  AI generates destination-specific packing items for your trip.
+                </p>
+              </div>
+              <AiPackingButton tripId={params.id} />
+            </div>
           </div>
         </div>
 
