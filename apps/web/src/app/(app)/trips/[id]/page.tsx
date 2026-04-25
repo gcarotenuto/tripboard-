@@ -121,6 +121,19 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
                   {trip.description}
                 </p>
               )}
+              {/* Tags */}
+              {(() => {
+                const tags = JSON.parse((trip.tags as unknown as string) || "[]") as string[];
+                return tags.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <span key={tag} className="rounded-full bg-white/60 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 backdrop-blur-sm">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
             </div>
             <TripActions
               tripId={trip.id}

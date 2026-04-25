@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { TripGrid } from "@/components/trips/TripGrid";
 import { NewTripButton } from "@/components/trips/NewTripButton";
+import { UserStatsStrip } from "@/components/trips/UserStatsStrip";
 
 export const metadata: Metadata = { title: "Trip Hub" };
 
@@ -18,6 +19,7 @@ export default function TripsPage() {
         </div>
         <NewTripButton />
       </div>
+      <UserStatsStrip />
       <TripGrid />
     </div>
   );
