@@ -183,6 +183,21 @@ function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
   const statusCfg = getStatusConfig(trip.status);
   const ghostText = trip.primaryDestination?.split(",")[0]?.toUpperCase() ?? "";
 
+  // "Day X of Y" for active trips (client-side, runs on render)
+  const activeDayInfo = (() => {
+    if (trip.status !== "ACTIVE" || !trip.startsAt) return null;
+    const start = new Date(trip.startsAt);
+    start.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayNumber = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+    if (dayNumber < 1) return null;
+    const totalDays = trip.endsAt
+      ? Math.floor((new Date(trip.endsAt).getTime() - start.getTime()) / 86400000) + 1
+      : null;
+    return { dayNumber, totalDays };
+  })();
+
   // 3D tilt effect
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const card = cardRef.current;
@@ -238,15 +253,24 @@ function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
           </div>
 
           {/* Status indicator */}
-          <div className="absolute top-3 left-3">
+          <div className="absolute top-3 left-3 flex items-center gap-1.5">
             {trip.status === "ACTIVE" ? (
-              <div className="flex items-center gap-1.5 rounded-full bg-white/90 dark:bg-zinc-900/90 px-2.5 py-1 backdrop-blur-sm shadow-sm">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-                <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Live</span>
-              </div>
+              <>
+                <div className="flex items-center gap-1.5 rounded-full bg-white/90 dark:bg-zinc-900/90 px-2.5 py-1 backdrop-blur-sm shadow-sm">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Live</span>
+                </div>
+                {activeDayInfo && (
+                  <div className="rounded-full bg-emerald-600/90 px-2 py-1 backdrop-blur-sm shadow-sm">
+                    <span className="text-[11px] font-bold text-white">
+                      Day {activeDayInfo.dayNumber}{activeDayInfo.totalDays ? `/${activeDayInfo.totalDays}` : ""}
+                    </span>
+                  </div>
+                )}
+              </>
             ) : (
               <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm shadow-sm ${statusCfg.badge}`}>
                 {statusCfg.label}

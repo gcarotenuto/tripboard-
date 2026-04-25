@@ -79,6 +79,21 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
   const endStr = formatTripDate(trip.endsAt);
   const dateRange = startStr && endStr ? `${startStr} – ${endStr}` : startStr ?? "";
 
+  // "Day X of Y" for active trips
+  const tripDayInfo = (() => {
+    if (trip.status !== "ACTIVE" || !trip.startsAt) return null;
+    const start = new Date(trip.startsAt);
+    start.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayNumber = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+    if (dayNumber < 1) return null;
+    const totalDays = trip.endsAt
+      ? Math.floor((new Date(trip.endsAt).getTime() - start.getTime()) / 86400000) + 1
+      : null;
+    return { dayNumber, totalDays };
+  })();
+
   return (
     <div className="min-h-full">
       {/* Hero section */}
@@ -106,9 +121,20 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset mb-3 ${badge.className}`}>
-                {badge.label}
-              </span>
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${badge.className}`}>
+                  {badge.label}
+                </span>
+                {tripDayInfo && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-800">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    </span>
+                    Day {tripDayInfo.dayNumber}{tripDayInfo.totalDays ? ` of ${tripDayInfo.totalDays}` : ""}
+                  </span>
+                )}
+              </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-tight break-words">
                 {trip.title}
               </h1>
