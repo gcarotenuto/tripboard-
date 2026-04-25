@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TripSummary } from "@tripboard/shared";
 import { formatDate, getTripDurationDays } from "@tripboard/shared";
-import { Spinner } from "@tripboard/ui";
 import { MapPin, Calendar, Wand2 } from "lucide-react";
 import { CoverUpload } from "@/components/trips/CoverUpload";
 
@@ -124,8 +123,17 @@ export function TripGrid() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-24">
-          <Spinner size="lg" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-zinc-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden animate-pulse">
+              <div className="h-36 bg-zinc-100 dark:bg-zinc-800" />
+              <div className="p-4 space-y-2">
+                <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg w-3/4" />
+                <div className="h-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg w-1/2" />
+                <div className="h-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg w-2/3" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center dark:border-red-900 dark:bg-red-950/20">
