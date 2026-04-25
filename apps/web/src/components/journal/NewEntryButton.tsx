@@ -4,6 +4,7 @@ import { useState } from "react";
 import { mutate } from "swr";
 import { Modal } from "@tripboard/ui";
 import { MOOD_OPTIONS } from "@tripboard/shared";
+import { Sparkles, Loader2 } from "lucide-react";
 
 export function NewEntryButton({ tripId }: { tripId: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,6 +12,28 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const handleAiWrite = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/journal/ai-entry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: new Date().toISOString().split("T")[0],
+          mood,
+          title,
+        }),
+      });
+      const json = await res.json() as { content?: string };
+      if (json.content) setContent(json.content);
+    } catch {
+      // silently fail
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!content.trim()) return;
@@ -81,14 +104,29 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
 
           {/* Content */}
           <div>
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-              What happened today?
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                What happened today?
+              </label>
+              <button
+                type="button"
+                onClick={handleAiWrite}
+                disabled={aiLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 transition-colors disabled:opacity-50"
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                {aiLoading ? "Writing…" : "✨ AI write"}
+              </button>
+            </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={8}
-              placeholder="Write your travel story..."
+              placeholder={aiLoading ? "AI is writing your entry…" : "Write your travel story, or let AI draft it for you…"}
               className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
             />
           </div>

@@ -14,6 +14,7 @@ interface TripActionsProps {
     status: string;
     startsAt?: Date | null;
     endsAt?: Date | null;
+    tags?: string[];
   };
 }
 

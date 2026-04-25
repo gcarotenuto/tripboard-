@@ -58,6 +58,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
       primaryDestination: true, destinations: true,
       startsAt: true, endsAt: true,
       isPublic: true, shareToken: true,
+      tags: true,
     },
   });
   if (!trip) notFound();
@@ -130,6 +131,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
                 status: trip.status,
                 startsAt: trip.startsAt,
                 endsAt: trip.endsAt,
+                tags: JSON.parse((trip.tags as unknown as string) || "[]") as string[],
               }}
             />
           </div>

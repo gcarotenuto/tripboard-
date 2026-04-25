@@ -25,6 +25,7 @@ interface EditTripModalProps {
     status: string;
     startsAt?: Date | null;
     endsAt?: Date | null;
+    tags?: string[];
   };
   open: boolean;
   onClose: () => void;
@@ -44,6 +45,7 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
     status: (initialData.status as TripStatus) ?? "PLANNING",
     startDate: toInputDate(initialData.startsAt),
     endDate: toInputDate(initialData.endsAt),
+    tags: (initialData.tags ?? []).join(", "),
   });
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -59,6 +61,7 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
         status: (initialData.status as TripStatus) ?? "PLANNING",
         startDate: toInputDate(initialData.startsAt),
         endDate: toInputDate(initialData.endsAt),
+        tags: (initialData.tags ?? []).join(", "),
       });
       setError(null);
     }
@@ -100,6 +103,7 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
         status: form.status,
         startsAt: form.startDate ? new Date(form.startDate).toISOString() : null,
         endsAt: form.endDate ? new Date(form.endDate).toISOString() : null,
+        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
       }),
     });
 
@@ -242,6 +246,29 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
                 className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+              Tags
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. beach, family, honeymoon (comma-separated)"
+              value={form.tags}
+              onChange={(e) => setForm({ ...form, tags: e.target.value })}
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            {form.tags.trim() && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {form.tags.split(",").map((t) => t.trim()).filter(Boolean).map((tag) => (
+                  <span key={tag} className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {error && (
