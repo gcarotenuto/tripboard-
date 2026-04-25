@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles, Loader2 } from "lucide-react";
 import { Spinner } from "@tripboard/ui";
 
 interface ChecklistItem {
@@ -74,7 +74,30 @@ export function DailyBoardView() {
 
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState("");
+  const [generatingBriefing, setGeneratingBriefing] = useState(false);
+  const [localBriefing, setLocalBriefing] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function generateBriefing() {
+    if (!data?.tripId) return;
+    setGeneratingBriefing(true);
+    try {
+      const res = await fetch("/api/daily/briefing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId: data.tripId, date: today }),
+      });
+      const json = await res.json() as { data?: { briefing: string } };
+      if (json.data?.briefing) {
+        setLocalBriefing(json.data.briefing);
+        await mutate();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setGeneratingBriefing(false);
+    }
+  }
 
   const items = checklist.length ? checklist : (data?.checklist ?? []);
 
@@ -159,16 +182,35 @@ export function DailyBoardView() {
       )}
 
       {/* Morning briefing */}
-      {data.morningBriefing && (
-        <section className="rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border border-indigo-100 dark:border-indigo-900 p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-2">
+      <section className="rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border border-indigo-100 dark:border-indigo-900 p-5">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-indigo-500">
             ☀️ Today&apos;s Briefing
           </p>
+          {!(localBriefing ?? data.morningBriefing) && (
+            <button
+              onClick={generateBriefing}
+              disabled={generatingBriefing}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors disabled:opacity-50"
+            >
+              {generatingBriefing ? (
+                <><Loader2 className="h-3 w-3 animate-spin" />Writing…</>
+              ) : (
+                <><Sparkles className="h-3 w-3" />AI write</>
+              )}
+            </button>
+          )}
+        </div>
+        {(localBriefing ?? data.morningBriefing) ? (
           <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-            {data.morningBriefing}
+            {localBriefing ?? data.morningBriefing}
           </p>
-        </section>
-      )}
+        ) : (
+          <p className="text-sm text-zinc-400 dark:text-zinc-600 italic">
+            No briefing yet — let AI craft your day&apos;s summary.
+          </p>
+        )}
+      </section>
 
       {/* Today's events */}
       {data.events.length > 0 && (
