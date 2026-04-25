@@ -12,6 +12,8 @@ interface TripStatsData {
   expenseTotal: number;
   expenseCurrency: string;
   journalEntryCount: number;
+  packingTotal?: number;
+  packingPacked?: number;
   daysUntilTrip?: number;
   startsAt?: string | null;
 }
@@ -101,6 +103,9 @@ export function TripStats({ tripId }: { tripId: string }) {
   const daysUntil = data ? getDaysUntil(data.startsAt) : null;
   const extractedDocs = data?.extractedDocumentCount ?? null;
   const totalDocs = data?.documentCount ?? 0;
+  const packingTotal = data?.packingTotal ?? 0;
+  const packingPacked = data?.packingPacked ?? 0;
+  const packingPct = packingTotal > 0 ? Math.round((packingPacked / packingTotal) * 100) : null;
 
   return (
     <div className="space-y-3">
@@ -132,6 +137,33 @@ export function TripStats({ tripId }: { tripId: string }) {
           value={data?.expenseTotal ? `${data.expenseTotal} ${data.expenseCurrency}` : null}
           delay={180} />
       </div>
+
+      {/* Packing progress bar — only shown when items exist */}
+      {packingPct !== null && (
+        <div className="rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3 flex items-center gap-4 animate-[fadeIn_0.5s_ease-out_0.2s_both]">
+          <span className="text-base shrink-0">🧳</span>
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Packing</span>
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 tabular-nums">
+                {packingPacked}/{packingTotal}
+                <span className="text-zinc-400 dark:text-zinc-600 font-normal ml-1">packed</span>
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${
+                  packingPct === 100 ? "bg-emerald-500" : packingPct > 50 ? "bg-indigo-500" : "bg-amber-500"
+                }`}
+                style={{ width: `${packingPct}%` }}
+              />
+            </div>
+          </div>
+          {packingPct === 100 && (
+            <span className="text-emerald-500 text-sm shrink-0">✓</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
