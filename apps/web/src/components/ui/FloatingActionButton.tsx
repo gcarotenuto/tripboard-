@@ -52,6 +52,7 @@ function QuickExpenseSheet({ tripId, onClose }: { tripId: string; onClose: () =>
       });
       if (res.ok) {
         await mutate(`/api/trips/${tripId}/expenses`);
+        await mutate(`/api/trips/${tripId}/expenses/summary`);
         await mutate(`/api/trips/${tripId}/stats`);
         toast("Expense added ✓");
         onClose();
