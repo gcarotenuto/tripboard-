@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { X, UserPlus, Users } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -38,6 +39,7 @@ interface CollaboratorsPanelProps {
 export function CollaboratorsPanel({ tripId, isOwner, ownerName, ownerEmail }: CollaboratorsPanelProps) {
   const membersKey = `/api/trips/${tripId}/members`;
   const { data: members, isLoading } = useSWR<Member[]>(isOwner ? membersKey : null, fetcher);
+  const { toast } = useToast();
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"EDITOR" | "VIEWER">("VIEWER");
@@ -74,19 +76,36 @@ export function CollaboratorsPanel({ tripId, isOwner, ownerName, ownerEmail }: C
   }
 
   async function handleRemove(memberId: string) {
-    const res = await fetch(`/api/trips/${tripId}/members/${memberId}`, { method: "DELETE" });
-    if (res.ok) {
-      await mutate(membersKey);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/members/${memberId}`, { method: "DELETE" });
+      if (res.ok) {
+        await mutate(membersKey);
+        toast("Member removed");
+      } else {
+        toast("Failed to remove member", "error");
+      }
+    } catch {
+      toast("Network error — please try again", "error");
     }
   }
 
   async function handleRoleChange(memberId: string, newRole: "EDITOR" | "VIEWER") {
-    await fetch(`/api/trips/${tripId}/members/${memberId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: newRole }),
-    });
-    await mutate(membersKey);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) {
+        await mutate(membersKey);
+      } else {
+        toast("Failed to update role", "error");
+        await mutate(membersKey); // revert optimistic UI
+      }
+    } catch {
+      toast("Network error — please try again", "error");
+      await mutate(membersKey); // revert
+    }
   }
 
   return (

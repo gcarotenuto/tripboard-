@@ -220,15 +220,20 @@ export function PackingView({ tripId }: { tripId: string }) {
     e.preventDefault();
     if (!newName.trim()) return;
     setAdding(true);
-    await fetch(`/api/trips/${tripId}/packing`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), category: newCategory }),
-    });
-    setNewName("");
-    setAdding(false);
-    globalMutate(apiKey);
-    globalMutate(`/api/trips/${tripId}/stats`);
+    try {
+      await fetch(`/api/trips/${tripId}/packing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim(), category: newCategory }),
+      });
+      setNewName("");
+      globalMutate(apiKey);
+      globalMutate(`/api/trips/${tripId}/stats`);
+    } catch {
+      toast("Failed to add item — please try again", "error");
+    } finally {
+      setAdding(false);
+    }
   }
 
   async function handleApplyTemplate(templateKey: string) {
@@ -237,23 +242,27 @@ export function PackingView({ tripId }: { tripId: string }) {
     setApplyingTemplate(true);
     setShowTemplates(false);
 
-    // Add all template items sequentially to preserve order
-    for (const item of template.items) {
-      await fetch(`/api/trips/${tripId}/packing`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: item.name,
-          category: item.category,
-          quantity: item.quantity ?? 1,
-        }),
-      });
+    try {
+      // Add all template items sequentially to preserve order
+      for (const item of template.items) {
+        await fetch(`/api/trips/${tripId}/packing`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: item.name,
+            category: item.category,
+            quantity: item.quantity ?? 1,
+          }),
+        });
+      }
+      globalMutate(apiKey);
+      globalMutate(`/api/trips/${tripId}/stats`);
+      toast(`${template.emoji} ${template.label} template applied — ${template.items.length} items added`);
+    } catch {
+      toast("Failed to apply template — please try again", "error");
+    } finally {
+      setApplyingTemplate(false);
     }
-
-    setApplyingTemplate(false);
-    globalMutate(apiKey);
-    globalMutate(`/api/trips/${tripId}/stats`);
-    toast(`${template.emoji} ${template.label} template applied — ${template.items.length} items added`);
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────

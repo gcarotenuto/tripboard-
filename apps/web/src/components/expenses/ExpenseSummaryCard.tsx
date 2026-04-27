@@ -53,14 +53,19 @@ function BudgetTracker({ tripId, totalUsd }: { tripId: string; totalUsd: number 
   const save = async () => {
     setSaving(true);
     const parsed = parseFloat(val);
-    await fetch(`/api/trips/${tripId}/budget`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ budget: isNaN(parsed) ? null : parsed, budgetCurrency: "USD" }),
-    });
-    await mutate();
-    setSaving(false);
-    setEditing(false);
+    try {
+      await fetch(`/api/trips/${tripId}/budget`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ budget: isNaN(parsed) ? null : parsed, budgetCurrency: "USD" }),
+      });
+      await mutate();
+      setEditing(false);
+    } catch {
+      // Budget save failed silently — user can retry
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (editing) {
