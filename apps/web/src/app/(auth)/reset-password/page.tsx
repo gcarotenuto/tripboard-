@@ -24,18 +24,23 @@ function ResetPasswordForm() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, email, password }),
-    });
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, email, password }),
+      });
 
-    const body = await res.json();
-    setLoading(false);
+      const body = await res.json();
 
-    if (!res.ok) { setError(body.error ?? "Something went wrong"); return; }
-    setDone(true);
-    setTimeout(() => router.push("/login"), 2000);
+      if (!res.ok) { setError(body.error ?? "Something went wrong"); return; }
+      setDone(true);
+      setTimeout(() => router.push("/login"), 2000);
+    } catch {
+      setError("Network error — please check your connection.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!token || !email) {

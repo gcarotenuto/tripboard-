@@ -34,29 +34,33 @@ export function LoginForm() {
     setLoading(true);
     setError("");
 
-    if (mode === "signup") {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError(body.error ?? "Registration failed. Try again.");
-        setLoading(false);
+    try {
+      if (mode === "signup") {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(body.error ?? "Registration failed. Try again.");
+          return;
+        }
+      }
+
+      const result = await signIn("credentials", { email, password, redirect: false });
+
+      if (result?.error) {
+        setError(mode === "signup" ? "Account created but sign-in failed. Try signing in." : "Invalid email or password.");
         return;
       }
-    }
 
-    const result = await signIn("credentials", { email, password, redirect: false });
-
-    if (result?.error) {
-      setError(mode === "signup" ? "Account created but sign-in failed. Try signing in." : "Invalid email or password.");
+      router.push("/trips");
+    } catch {
+      setError("Network error — please check your connection.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/trips");
   };
 
   return (

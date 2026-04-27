@@ -15,24 +15,29 @@ export default function ForgotPasswordPage() {
     setError("");
     setResetUrl("");
 
-    const res = await fetch("/api/auth/forgot-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    const body = await res.json();
-    setLoading(false);
+      const body = await res.json();
 
-    if (!res.ok) {
-      setError(body.error ?? "Something went wrong");
-      return;
-    }
+      if (!res.ok) {
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
 
-    if (body.data?.resetUrl) {
-      setResetUrl(body.data.resetUrl);
-    } else {
-      setResetUrl("__sent__");
+      if (body.data?.resetUrl) {
+        setResetUrl(body.data.resetUrl);
+      } else {
+        setResetUrl("__sent__");
+      }
+    } catch {
+      setError("Network error — please check your connection.");
+    } finally {
+      setLoading(false);
     }
   };
 

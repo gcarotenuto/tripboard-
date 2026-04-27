@@ -27,22 +27,26 @@ export function UploadButton({ tripId }: { tripId: string }) {
     formData.append("file", file);
     formData.append("tripId", tripId);
 
-    const res = await fetch("/api/documents/upload", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Upload failed. Please try again.");
-    } else {
-      // Revalidate the document list so the new file appears immediately
-      mutate(`/api/trips/${tripId}/documents`);
-      // Reset file input so the same file can be re-uploaded if needed
-      if (inputRef.current) inputRef.current.value = "";
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Upload failed. Please try again.");
+      } else {
+        // Revalidate the document list so the new file appears immediately
+        mutate(`/api/trips/${tripId}/documents`);
+        // Reset file input so the same file can be re-uploaded if needed
+        if (inputRef.current) inputRef.current.value = "";
+      }
+    } catch {
+      setError("Network error — please check your connection.");
+    } finally {
+      setUploading(false);
     }
-
-    setUploading(false);
   };
 
   return (
