@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { mutate } from "swr";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
@@ -14,6 +14,13 @@ function QuickExpenseModal({ tripId, onClose }: QuickExpenseProps & { onClose: (
   const { toast } = useToast();
   const [form, setForm] = useState({ title: "", amount: "", currency: "EUR", category: "OTHER" });
   const [saving, setSaving] = useState(false);
+
+  // ESC to close
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
 
   const CATEGORIES = [
     { value: "TRANSPORT", label: "🚗 Transport" },
@@ -29,27 +36,34 @@ function QuickExpenseModal({ tripId, onClose }: QuickExpenseProps & { onClose: (
     if (!form.title.trim() || !form.amount) return;
     setSaving(true);
 
-    const res = await fetch(`/api/trips/${tripId}/expenses`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title.trim(),
-        amount: parseFloat(form.amount),
-        currency: form.currency,
-        category: form.category,
-        date: new Date().toISOString(),
-        isPaid: true,
-      }),
-    });
+    try {
+      const res = await fetch(`/api/trips/${tripId}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          amount: parseFloat(form.amount),
+          currency: form.currency,
+          category: form.category,
+          date: new Date().toISOString(),
+          isPaid: true,
+        }),
+      });
 
-    if (res.ok) {
-      await mutate(`/api/trips/${tripId}/expenses`);
-      await mutate(`/api/trips/${tripId}/expenses/summary`);
-      await mutate(`/api/trips/${tripId}/stats`);
-      toast("Expense added");
-      onClose();
+      if (res.ok) {
+        await mutate(`/api/trips/${tripId}/expenses`);
+        await mutate(`/api/trips/${tripId}/expenses/summary`);
+        await mutate(`/api/trips/${tripId}/stats`);
+        toast("Expense added ✓");
+        onClose();
+      } else {
+        toast("Failed to add expense — please try again", "error");
+      }
+    } catch {
+      toast("Network error — please check your connection", "error");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   return (
