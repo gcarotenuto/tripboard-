@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
-import { Trash2, Plus, Luggage } from "lucide-react";
+import { Trash2, Plus, Luggage, AlertTriangle } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -147,11 +148,15 @@ export function PackingView({ tripId }: { tripId: string }) {
   const apiKey = `/api/trips/${tripId}/packing`;
   const { data: list, isLoading } = useSWR<PackingList>(apiKey, fetcher);
   const confettiFired = useRef(false);
+  const { toast } = useToast();
 
   // Add-item form state
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<Category>("OTHER");
   const [adding, setAdding] = useState(false);
+
+  // Delete confirmation
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   // Template picker visibility
   const [showTemplates, setShowTemplates] = useState(false);
@@ -203,8 +208,10 @@ export function PackingView({ tripId }: { tripId: string }) {
   }
 
   async function handleDelete(item: PackingItem) {
+    setDeletingItemId(null);
     await fetch(`/api/trips/${tripId}/packing/${item.id}`, { method: "DELETE" });
     globalMutate(apiKey);
+    toast(`"${item.name}" removed`);
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -242,6 +249,7 @@ export function PackingView({ tripId }: { tripId: string }) {
 
     setApplyingTemplate(false);
     globalMutate(apiKey);
+    toast(`${template.emoji} ${template.label} template applied — ${template.items.length} items added`);
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -457,14 +465,35 @@ export function PackingView({ tripId }: { tripId: string }) {
                     </span>
                   )}
 
-                  {/* Delete (hover reveal) */}
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="shrink-0 p-1 rounded-lg opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-all"
-                    aria-label="Delete item"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {/* Delete (hover reveal) — with inline confirmation */}
+                  <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {deletingItemId === item.id ? (
+                      <div className="flex items-center gap-1 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-2 py-0.5">
+                        <AlertTriangle size={10} className="text-red-500 shrink-0" />
+                        <button
+                          onClick={() => handleDelete(item)}
+                          className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
+                        >
+                          Yes
+                        </button>
+                        <span className="text-red-300 dark:text-red-800 text-[10px]">·</span>
+                        <button
+                          onClick={() => setDeletingItemId(null)}
+                          className="text-[11px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeletingItemId(item.id)}
+                        className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-all"
+                        aria-label="Delete item"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

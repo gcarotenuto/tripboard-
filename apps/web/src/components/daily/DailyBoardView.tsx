@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { Plus, Sparkles, Loader2, ArrowRight } from "lucide-react";
+import { Plus, Sparkles, Loader2, ArrowRight, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 
 interface TripSummaryMin {
@@ -173,6 +173,7 @@ export function DailyBoardView() {
   const { toast } = useToast();
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState("");
+  const [deletingChecklistId, setDeletingChecklistId] = useState<string | null>(null);
   const [generatingBriefing, setGeneratingBriefing] = useState(false);
   const [localBriefing, setLocalBriefing] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -216,6 +217,13 @@ export function DailyBoardView() {
     const updated = base.map((item) =>
       item.id === id ? { ...item, done: !item.done } : item
     );
+    persistChecklist(updated);
+  };
+
+  const deleteItem = (id: string) => {
+    const base = items.length ? items : (data?.checklist ?? []);
+    const updated = base.filter((item) => item.id !== id);
+    setDeletingChecklistId(null);
     persistChecklist(updated);
   };
 
@@ -416,18 +424,19 @@ export function DailyBoardView() {
           {items.length > 0 && items
             .sort((a, b) => a.order - b.order)
             .map((item) => (
-              <label
+              <div
                 key={item.id}
-                className="flex items-start gap-3 rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                className="group flex items-center gap-3 rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
               >
                 <input
                   type="checkbox"
                   checked={item.done}
                   onChange={() => toggleItem(item.id)}
-                  className="mt-0.5 h-4 w-4 rounded accent-indigo-600"
+                  className="h-4 w-4 rounded accent-indigo-600 shrink-0 cursor-pointer"
                 />
                 <span
-                  className={`text-sm ${
+                  onClick={() => toggleItem(item.id)}
+                  className={`flex-1 text-sm cursor-pointer select-none ${
                     item.done
                       ? "line-through text-zinc-400 dark:text-zinc-600"
                       : "text-zinc-800 dark:text-zinc-200"
@@ -435,7 +444,32 @@ export function DailyBoardView() {
                 >
                   {item.text}
                 </span>
-              </label>
+                {/* Delete with inline confirmation */}
+                <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {deletingChecklistId === item.id ? (
+                    <div className="flex items-center gap-1 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-2 py-0.5">
+                      <span className="text-[11px] font-medium text-red-700 dark:text-red-400">Remove?</span>
+                      <button
+                        onClick={() => deleteItem(item.id)}
+                        className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:text-red-800 transition-colors"
+                      >Yes</button>
+                      <span className="text-red-300 dark:text-red-800 text-[10px]">·</span>
+                      <button
+                        onClick={() => setDeletingChecklistId(null)}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-700 transition-colors"
+                      >No</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setDeletingChecklistId(item.id)}
+                      className="p-1 rounded-lg text-zinc-300 dark:text-zinc-700 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 transition-all"
+                      title="Remove item"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
 
           {/* Add item input */}

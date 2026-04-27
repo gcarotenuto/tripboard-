@@ -9,6 +9,16 @@ import { useToast } from "@/components/ui/Toast";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
+function getDateGroupLabel(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = today.getTime() - d.getTime();
+  if (diff === 0) return "Today";
+  if (diff === 86400000) return "Yesterday";
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
 const CURRENCIES = ["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "CAD", "MXN"] as const;
 const CATEGORIES = ["TRANSPORT", "ACCOMMODATION", "FOOD", "ACTIVITY", "SHOPPING", "HEALTH", "OTHER"] as const;
 
@@ -178,6 +188,25 @@ export function ExpenseList({ tripId }: { tripId: string }) {
 
   const isFiltering = filterCategory !== "ALL" || search.trim().length > 0;
 
+  // Group by date when sorting date-desc / date-asc; otherwise a single group with no label
+  const expenseGroups = useMemo(() => {
+    if (filteredExpenses.length === 0) return [];
+    const isDateSort = sort === "date-desc" || sort === "date-asc";
+    if (!isDateSort) return [{ key: "all", label: null as string | null, expenses: filteredExpenses }];
+
+    const groups: { key: string; label: string | null; expenses: Expense[] }[] = [];
+    for (const e of filteredExpenses) {
+      const key = e.date ? String(e.date).split("T")[0] : "";
+      const last = groups[groups.length - 1];
+      if (last && last.key === key) {
+        last.expenses.push(e);
+      } else {
+        groups.push({ key, label: key ? getDateGroupLabel(key) : "No date", expenses: [e] });
+      }
+    }
+    return groups;
+  }, [filteredExpenses, sort]);
+
   if (isLoading) return <ExpenseSkeleton />;
 
   if (!expenses?.length) {
@@ -262,8 +291,22 @@ export function ExpenseList({ tripId }: { tripId: string }) {
         <p className="text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center">No expenses match your filters.</p>
       )}
 
-      <div className="space-y-2">
-        {filteredExpenses.map((expense) => (
+      <div className={expenseGroups.some(g => g.label !== null) ? "space-y-5" : ""}>
+        {expenseGroups.map(({ key, label, expenses }) => (
+          <div key={key}>
+            {label !== null && (
+              <div className="flex items-center justify-between mb-2 px-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{label}</span>
+                {expenses.length > 1 && (
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 tabular-nums">
+                    {formatCurrency(expenses.reduce((s, e) => s + Number(e.amount), 0), expenses[0]?.currency ?? "USD")}
+                    {expenses.some(e => e.currency !== expenses[0]?.currency) && <span className="text-zinc-400 dark:text-zinc-600"> mixed</span>}
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="space-y-2">
+            {expenses.map((expense) => (
           <div
             key={expense.id}
             className="group flex items-center gap-3 rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3"
@@ -333,6 +376,9 @@ export function ExpenseList({ tripId }: { tripId: string }) {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+            ))}
             </div>
           </div>
         ))}
