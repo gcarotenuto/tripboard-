@@ -67,6 +67,7 @@ export function CollaboratorsPanel({ tripId, isOwner, ownerName, ownerEmail }: C
         setSuccessMsg(`${json.data.user.name ?? json.data.user.email} was invited as ${role.toLowerCase()}`);
         setEmail("");
         await mutate(membersKey);
+        setTimeout(() => setSuccessMsg(""), 4000);
       }
     } catch {
       setErrorMsg("Network error. Please try again.");
