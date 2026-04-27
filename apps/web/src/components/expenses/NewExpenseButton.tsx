@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { mutate } from "swr";
 import type { ExpenseCategory, ExpenseCurrency } from "@tripboard/shared";
 import { EXPENSE_CATEGORY_LABELS, EXPENSE_CATEGORY_EMOJIS } from "@tripboard/shared";
+import { useToast } from "@/components/ui/Toast";
 
 const CURRENCIES: ExpenseCurrency[] = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "SGD"];
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[];
@@ -11,6 +12,7 @@ const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[];
 export function NewExpenseButton({ tripId }: { tripId: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [form, setForm] = useState({
     title: "",
     amount: "",
@@ -20,33 +22,48 @@ export function NewExpenseButton({ tripId }: { tripId: string }) {
     notes: "",
   });
 
+  // ESC to close
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.amount) return;
     setLoading(true);
 
     const amount = parseFloat(form.amount);
-    await fetch(`/api/trips/${tripId}/expenses`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title,
-        amount,
-        currency: form.currency,
-        amountUsd: amount, // simplified — no live FX in MVP
-        category: form.category,
-        date: form.date,
-        notes: form.notes || undefined,
-      }),
-    });
+    try {
+      const res = await fetch(`/api/trips/${tripId}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          amount,
+          currency: form.currency,
+          amountUsd: amount,
+          category: form.category,
+          date: form.date,
+          notes: form.notes || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("save failed");
 
-    await mutate(`/api/trips/${tripId}/expenses`);
-    await mutate(`/api/trips/${tripId}/expenses/summary`);
-    await mutate(`/api/trips/${tripId}/stats`);
+      await mutate(`/api/trips/${tripId}/expenses`);
+      await mutate(`/api/trips/${tripId}/expenses/summary`);
+      await mutate(`/api/trips/${tripId}/stats`);
 
-    setForm({ title: "", amount: "", currency: "USD", category: "OTHER", date: new Date().toISOString().split("T")[0], notes: "" });
-    setLoading(false);
-    setOpen(false);
+      toast(`${EXPENSE_CATEGORY_EMOJIS[form.category]} Expense logged`);
+      setForm({ title: "", amount: "", currency: "USD", category: "OTHER", date: new Date().toISOString().split("T")[0], notes: "" });
+      setOpen(false);
+    } catch {
+      toast("Failed to save expense — please try again", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

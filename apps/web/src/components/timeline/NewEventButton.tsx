@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { mutate } from "swr";
 import type { EventType } from "@tripboard/shared";
 import { EVENT_TYPE_EMOJIS, EVENT_TYPE_LABELS, LOGISTICS_EVENT_TYPES, MOMENTS_EVENT_TYPES } from "@tripboard/shared";
+import { useToast } from "@/components/ui/Toast";
 
 const ALL_TYPES = [...LOGISTICS_EVENT_TYPES, ...MOMENTS_EVENT_TYPES];
 
@@ -15,6 +16,7 @@ interface NewEventButtonProps {
 export function NewEventButton({ tripId, defaultView = "logistics" }: NewEventButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [form, setForm] = useState({
     title: "",
     type: (defaultView === "logistics" ? "FLIGHT" : "ACTIVITY") as EventType,
@@ -23,6 +25,14 @@ export function NewEventButton({ tripId, defaultView = "logistics" }: NewEventBu
     locationName: "",
     notes: "",
   });
+
+  // ESC to close
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,25 +46,32 @@ export function NewEventButton({ tripId, defaultView = "logistics" }: NewEventBu
         : new Date(form.date).toISOString();
     }
 
-    await fetch(`/api/trips/${tripId}/events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title,
-        type: form.type,
-        startsAt,
-        locationName: form.locationName || undefined,
-        notes: form.notes || undefined,
-      }),
-    });
+    try {
+      const res = await fetch(`/api/trips/${tripId}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          type: form.type,
+          startsAt,
+          locationName: form.locationName || undefined,
+          notes: form.notes || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("save failed");
 
-    await mutate(`/api/trips/${tripId}/events?view=LOGISTICS`);
-    await mutate(`/api/trips/${tripId}/events?view=MOMENTS`);
-    await mutate(`/api/trips/${tripId}/stats`);
+      await mutate(`/api/trips/${tripId}/events?view=LOGISTICS`);
+      await mutate(`/api/trips/${tripId}/events?view=MOMENTS`);
+      await mutate(`/api/trips/${tripId}/stats`);
 
-    setForm({ title: "", type: defaultView === "logistics" ? "FLIGHT" : "ACTIVITY", date: "", time: "", locationName: "", notes: "" });
-    setLoading(false);
-    setOpen(false);
+      toast(`${EVENT_TYPE_EMOJIS[form.type]} "${form.title}" added to timeline`);
+      setForm({ title: "", type: defaultView === "logistics" ? "FLIGHT" : "ACTIVITY", date: "", time: "", locationName: "", notes: "" });
+      setOpen(false);
+    } catch {
+      toast("Failed to add event — please try again", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
