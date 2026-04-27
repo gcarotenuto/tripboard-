@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 import { Sparkles, Loader2 } from "lucide-react";
@@ -22,6 +22,14 @@ export function NewTripButton() {
     startDate: "",
     endDate: "",
   });
+
+  // ESC to close
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
 
   const handleAiDescription = async () => {
     if (!form.title.trim()) return;
@@ -51,29 +59,34 @@ export function NewTripButton() {
     }
     setLoading(true);
 
-    const res = await fetch("/api/trips", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title,
-        description: form.description.trim() || undefined,
-        primaryDestination: form.destination || undefined,
-        status: form.status,
-        startsAt: form.startDate ? new Date(form.startDate).toISOString() : undefined,
-        endsAt: form.endDate ? new Date(form.endDate).toISOString() : undefined,
-      }),
-    });
+    try {
+      const res = await fetch("/api/trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description.trim() || undefined,
+          primaryDestination: form.destination || undefined,
+          status: form.status,
+          startsAt: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+          endsAt: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+        }),
+      });
 
-    if (res.ok) {
-      const json = await res.json() as { data: { id: string } };
-      await mutate("/api/trips"); // refresh trip list
-      setOpen(false);
-      setForm({ title: "", destination: "", description: "", status: "UPCOMING", startDate: "", endDate: "" });
-      router.push(`/trips/${json.data.id}`);
-    } else {
-      toast("Failed to create trip — please try again", "error");
+      if (res.ok) {
+        const json = await res.json() as { data: { id: string } };
+        await mutate("/api/trips"); // refresh trip list
+        setOpen(false);
+        setForm({ title: "", destination: "", description: "", status: "UPCOMING", startDate: "", endDate: "" });
+        router.push(`/trips/${json.data.id}`);
+      } else {
+        toast("Failed to create trip — please try again", "error");
+      }
+    } catch {
+      toast("Network error — please check your connection", "error");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

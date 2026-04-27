@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
+import { useToast } from "@/components/ui/Toast";
 
 interface SettingsClientProps {
   user: { name: string | null; email: string | null; preferences?: Record<string, unknown> };
@@ -15,6 +16,7 @@ const INPUT_DISABLED = "w-full rounded-xl border border-zinc-200 dark:border-zin
 const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF"];
 
 export function SettingsClient({ user }: SettingsClientProps) {
+  const { toast } = useToast();
   const [name, setName] = useState(user.name ?? "");
   const [nameSaved, setNameSaved] = useState(false);
   const [nameSaving, setNameSaving] = useState(false);
@@ -24,15 +26,19 @@ export function SettingsClient({ user }: SettingsClientProps) {
   const [currencySaved, setCurrencySaved] = useState(false);
 
   async function saveName() {
+    if (!name.trim()) return;
     setNameSaving(true);
     try {
-      await fetch("/api/user/profile", {
+      const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name: name.trim() }),
       });
+      if (!res.ok) throw new Error("save failed");
       setNameSaved(true);
       setTimeout(() => setNameSaved(false), 2000);
+    } catch {
+      toast("Failed to save name — please try again", "error");
     } finally {
       setNameSaving(false);
     }
@@ -40,13 +46,18 @@ export function SettingsClient({ user }: SettingsClientProps) {
 
   async function saveCurrency(value: string) {
     setDefaultCurrency(value);
-    await fetch("/api/user/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preferences: { defaultCurrency: value } }),
-    });
-    setCurrencySaved(true);
-    setTimeout(() => setCurrencySaved(false), 2000);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: { defaultCurrency: value } }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setCurrencySaved(true);
+      setTimeout(() => setCurrencySaved(false), 2000);
+    } catch {
+      toast("Failed to save preference — please try again", "error");
+    }
   }
 
   return (

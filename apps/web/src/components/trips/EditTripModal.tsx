@@ -69,6 +69,14 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
     }
   }, [open, initialData]);
 
+  // ESC to close
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
   const handleAiDescription = async () => {
     if (!form.title.trim()) return;
     setAiLoading(true);
@@ -95,29 +103,34 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
     setLoading(true);
     setError(null);
 
-    const res = await fetch(`/api/trips/${tripId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        primaryDestination: form.destination.trim() || null,
-        status: form.status,
-        startsAt: form.startDate ? new Date(form.startDate).toISOString() : null,
-        endsAt: form.endDate ? new Date(form.endDate).toISOString() : null,
-        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      }),
-    });
+    try {
+      const res = await fetch(`/api/trips/${tripId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          description: form.description.trim() || null,
+          primaryDestination: form.destination.trim() || null,
+          status: form.status,
+          startsAt: form.startDate ? new Date(form.startDate).toISOString() : null,
+          endsAt: form.endDate ? new Date(form.endDate).toISOString() : null,
+          tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        }),
+      });
 
-    if (res.ok) {
-      toast("Trip updated successfully");
-      onClose();
-      router.refresh();
-    } else {
-      const json = await res.json().catch(() => ({}));
-      setError(json.error ?? "Failed to save changes.");
+      if (res.ok) {
+        toast("Trip updated successfully");
+        onClose();
+        router.refresh();
+      } else {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error ?? "Failed to save changes.");
+      }
+    } catch {
+      setError("Network error — please check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (!open) return null;
