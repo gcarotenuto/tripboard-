@@ -176,6 +176,8 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     return list;
   }, [expenses, filterCategory, sort, search]);
 
+  const isFiltering = filterCategory !== "ALL" || search.trim().length > 0;
+
   if (isLoading) return <ExpenseSkeleton />;
 
   if (!expenses?.length) {
@@ -335,6 +337,23 @@ export function ExpenseList({ tripId }: { tripId: string }) {
           </div>
         ))}
       </div>
+
+      {/* Filtered total — shown when filter/search is active */}
+      {isFiltering && filteredExpenses.length > 0 && (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-4 py-2.5">
+          <span className="text-xs text-zinc-400 dark:text-zinc-500">
+            {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? "s" : ""} filtered
+          </span>
+          <div className="text-right">
+            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              {formatCurrency(filteredExpenses.reduce((s, e) => s + Number(e.amount), 0), filteredExpenses[0]?.currency ?? "USD")}
+            </span>
+            {filteredExpenses.some((e) => e.currency !== filteredExpenses[0]?.currency) && (
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-500">mixed currencies</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       {editingExpense && (
