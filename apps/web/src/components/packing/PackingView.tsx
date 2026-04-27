@@ -185,6 +185,7 @@ export function PackingView({ tripId }: { tripId: string }) {
       body: JSON.stringify({ isPacked: !item.isPacked }),
     });
     await globalMutate(apiKey);
+    globalMutate(`/api/trips/${tripId}/stats`);
 
     // Confetti when ALL items are packed (fire only once per session)
     const fresh = (await fetch(apiKey).then((r) => r.json()).catch(() => null))?.data;
@@ -211,6 +212,7 @@ export function PackingView({ tripId }: { tripId: string }) {
     setDeletingItemId(null);
     await fetch(`/api/trips/${tripId}/packing/${item.id}`, { method: "DELETE" });
     globalMutate(apiKey);
+    globalMutate(`/api/trips/${tripId}/stats`);
     toast(`"${item.name}" removed`);
   }
 
@@ -226,6 +228,7 @@ export function PackingView({ tripId }: { tripId: string }) {
     setNewName("");
     setAdding(false);
     globalMutate(apiKey);
+    globalMutate(`/api/trips/${tripId}/stats`);
   }
 
   async function handleApplyTemplate(templateKey: string) {
@@ -249,6 +252,7 @@ export function PackingView({ tripId }: { tripId: string }) {
 
     setApplyingTemplate(false);
     globalMutate(apiKey);
+    globalMutate(`/api/trips/${tripId}/stats`);
     toast(`${template.emoji} ${template.label} template applied — ${template.items.length} items added`);
   }
 
@@ -402,6 +406,7 @@ export function PackingView({ tripId }: { tripId: string }) {
                       )
                     );
                     globalMutate(apiKey);
+                    globalMutate(`/api/trips/${tripId}/stats`);
                   }}
                   className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
                   title="Mark all packed"
