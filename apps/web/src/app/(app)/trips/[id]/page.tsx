@@ -14,7 +14,7 @@ import { ShareButton } from "@/components/trips/ShareButton";
 import { TripActions } from "@/components/trips/TripActions";
 import { AiItineraryButton } from "@/components/trips/AiItineraryButton";
 import { AiPackingButton } from "@/components/packing/AiPackingButton";
-import { CalendarDays, Lock, BookOpen, CreditCard, ArrowLeft, Printer, Calendar } from "lucide-react";
+import { CalendarDays, Lock, BookOpen, CreditCard, Luggage, MapPin, ArrowLeft, Printer, Calendar } from "lucide-react";
 
 export const metadata: Metadata = { title: "Trip Overview" };
 
@@ -43,6 +43,8 @@ const NAV_ITEMS = [
   { href: "vault", label: "Vault", Icon: Lock, description: "Documents & tickets" },
   { href: "journal", label: "Journal", Icon: BookOpen, description: "Notes & memories" },
   { href: "expenses", label: "Expenses", Icon: CreditCard, description: "Budget & spending" },
+  { href: "packing", label: "Packing", Icon: Luggage, description: "Packing checklist" },
+  { href: "map", label: "Map", Icon: MapPin, description: "Locations & pins" },
 ];
 
 interface TripPageProps { params: { id: string } }
@@ -203,7 +205,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">
             Navigate
           </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}

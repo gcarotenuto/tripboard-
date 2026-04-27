@@ -163,12 +163,37 @@ export function ExpenseList({ tripId }: { tripId: string }) {
 
   if (!expenses?.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-10 text-center">
-        <div className="text-4xl mb-3">💳</div>
-        <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-1">No expenses yet</h3>
-        <p className="text-sm text-zinc-500">
-          Tap <strong>+ Add Expense</strong> to start tracking your spending.
-        </p>
+      <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
+        {/* Hero */}
+        <div className="bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-cyan-50/30 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-cyan-950/10 px-8 py-7 text-center">
+          <div className="text-5xl mb-3">💳</div>
+          <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base">No expenses yet</h3>
+          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+            Track every coffee, tour, and taxi — TripBoard converts everything to a single currency automatically.
+          </p>
+        </div>
+
+        {/* Category preview */}
+        <div className="border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">Expense categories</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { emoji: "🚗", label: "Transport" },
+              { emoji: "🏨", label: "Hotel" },
+              { emoji: "🍽️", label: "Food" },
+              { emoji: "🎯", label: "Activities" },
+              { emoji: "🛍️", label: "Shopping" },
+              { emoji: "💊", label: "Health" },
+            ].map(({ emoji, label }) => (
+              <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-1 text-xs text-zinc-600 dark:text-zinc-400">
+                <span>{emoji}</span><span>{label}</span>
+              </span>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-zinc-400 dark:text-zinc-500 text-center">
+            Tap <strong className="text-zinc-600 dark:text-zinc-300">+ Add Expense</strong> above to log your first spend.
+          </p>
+        </div>
       </div>
     );
   }
