@@ -12,6 +12,7 @@ import { WeatherWidget } from "@/components/weather/WeatherWidget";
 import { CollaboratorsPanel } from "@/components/collaboration/CollaboratorsPanel";
 import { ShareButton } from "@/components/trips/ShareButton";
 import { TripActions } from "@/components/trips/TripActions";
+import { TripNudges } from "@/components/trips/TripNudges";
 import { AiItineraryButton } from "@/components/trips/AiItineraryButton";
 import { AiPackingButton } from "@/components/packing/AiPackingButton";
 import { CalendarDays, Lock, BookOpen, CreditCard, Luggage, MapPin, ArrowLeft, Printer, Calendar } from "lucide-react";
@@ -74,7 +75,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
       primaryDestination: true, destinations: true,
       startsAt: true, endsAt: true,
       isPublic: true, shareToken: true,
-      tags: true,
+      tags: true, memoryCapsule: true,
     },
   });
   if (!trip) notFound();
@@ -200,6 +201,16 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
           tripStatus={trip.status}
           hasDestination={!!trip.primaryDestination}
           hasDates={!!(trip.startsAt && trip.endsAt)}
+        />
+
+        {/* Proactive nudges */}
+        <TripNudges
+          tripId={params.id}
+          status={trip.status}
+          hasDestination={!!trip.primaryDestination}
+          hasDates={!!(trip.startsAt && trip.endsAt)}
+          hasMemoryCapsule={!!trip.memoryCapsule}
+          startsAt={trip.startsAt}
         />
 
         {/* Stats */}
