@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Map, CalendarDays, CreditCard, BookOpen, X, ArrowRight } from "lucide-react";
+import useSWR from "swr";
+import { Search, Map, CalendarDays, CreditCard, BookOpen, X, ArrowRight, Sun, Archive, Settings } from "lucide-react";
 
 interface TripResult {
   id: string;
@@ -50,6 +51,26 @@ interface FlatResult {
   icon: React.ReactNode;
 }
 
+interface TripSummaryMin {
+  id: string;
+  title: string;
+  primaryDestination: string | null;
+  status: string;
+}
+
+const tripFetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
+
+const QUICK_LINKS = [
+  { href: "/trips",   label: "Trip Hub",     icon: <Map className="h-3.5 w-3.5" />,      bg: "bg-indigo-50 dark:bg-indigo-950/50",   color: "text-indigo-600 dark:text-indigo-400" },
+  { href: "/daily",   label: "Daily Board",  icon: <Sun className="h-3.5 w-3.5" />,      bg: "bg-amber-50 dark:bg-amber-950/50",    color: "text-amber-600 dark:text-amber-400" },
+  { href: "/archive", label: "Archive",      icon: <Archive className="h-3.5 w-3.5" />,  bg: "bg-violet-50 dark:bg-violet-950/50",  color: "text-violet-600 dark:text-violet-400" },
+  { href: "/settings",label: "Settings",     icon: <Settings className="h-3.5 w-3.5" />, bg: "bg-zinc-50 dark:bg-zinc-800",         color: "text-zinc-600 dark:text-zinc-400" },
+];
+
+const STATUS_EMOJI: Record<string, string> = {
+  ACTIVE: "🟢", UPCOMING: "🟡", PLANNING: "⚪", COMPLETED: "✅", ARCHIVED: "📦",
+};
+
 interface SearchModalProps {
   open: boolean;
   onClose: () => void;
@@ -80,6 +101,9 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+
+  // Pull trips from SWR cache (free — already loaded on /trips page)
+  const { data: recentTrips } = useSWR<TripSummaryMin[]>("/api/trips", tripFetcher);
 
   // Debounce
   useEffect(() => {
@@ -245,8 +269,56 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           )}
 
           {!loading && query.length < 2 && (
-            <div className="py-10 text-center text-sm text-zinc-400">
-              Type at least 2 characters to search
+            <div className="py-3">
+              {/* Quick navigation */}
+              <div className="px-4 pt-1 pb-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600 mb-2">Navigate</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {QUICK_LINKS.map((link) => (
+                    <button
+                      key={link.href}
+                      onClick={() => { onClose(); router.push(link.href); }}
+                      className={`flex flex-col items-center gap-1.5 rounded-xl py-3 px-2 transition-colors hover:opacity-80 ${link.bg}`}
+                    >
+                      <span className={link.color}>{link.icon}</span>
+                      <span className={`text-[10px] font-semibold ${link.color}`}>{link.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent trips */}
+              {recentTrips && recentTrips.length > 0 && (
+                <div className="mt-2">
+                  <div className="px-4 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">Your trips</p>
+                  </div>
+                  {recentTrips.slice(0, 5).map((trip) => (
+                    <button
+                      key={trip.id}
+                      onClick={() => { onClose(); router.push(`/trips/${trip.id}`); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-left transition-colors"
+                    >
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-sm">
+                        {STATUS_EMOJI[trip.status] ?? "✈️"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{trip.title}</p>
+                        {trip.primaryDestination && (
+                          <p className="text-xs text-zinc-400 truncate">{trip.primaryDestination}</p>
+                        )}
+                      </div>
+                      <ArrowRight className="h-3 w-3 text-zinc-300 dark:text-zinc-700 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="px-4 pt-3 pb-1 border-t border-zinc-100 dark:border-zinc-800 mt-2">
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-600 text-center">
+                  Type to search trips, events, expenses &amp; journal
+                </p>
+              </div>
             </div>
           )}
 

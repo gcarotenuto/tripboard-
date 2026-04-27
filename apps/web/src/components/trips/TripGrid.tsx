@@ -140,27 +140,51 @@ export function TripGrid() {
           <p className="text-sm text-red-600 dark:text-red-400">Could not load trips. Please refresh.</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 p-16 text-center">
-          <div className="text-5xl mb-4">✈️</div>
-          <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 text-lg">
-            {filter === "All" ? "No trips yet" : `No ${filter.toLowerCase()} trips`}
-          </h3>
-          <p className="mt-2 text-sm text-zinc-400">
-            {filter === "All" ? "Create your first trip to get started." : "Try a different filter."}
-          </p>
-          {filter === "All" && trips?.length === 0 && (
-            <button
-              onClick={handleDemo}
-              disabled={demoLoading}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 px-5 py-2.5 text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-colors disabled:opacity-60"
-            >
-              {demoLoading
-                ? <><span className="h-4 w-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" /> Creating demo…</>
-                : <><Wand2 className="h-4 w-4" /> Try with a sample trip</>
-              }
-            </button>
-          )}
-        </div>
+        filter !== "All" ? (
+          <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 p-12 text-center">
+            <div className="text-3xl mb-3">🔍</div>
+            <p className="font-medium text-zinc-700 dark:text-zinc-300">No {filter.toLowerCase()} trips</p>
+            <button onClick={() => setFilter("All")} className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View all trips</button>
+          </div>
+        ) : (
+          /* First-time user: rich onboarding state */
+          <div className="rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            {/* Hero */}
+            <div className="bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50 dark:from-indigo-950/20 dark:via-violet-950/20 dark:to-purple-950/20 px-8 pt-12 pb-8 text-center">
+              <div className="text-6xl mb-4 animate-float inline-block">✈️</div>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Plan your first adventure</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
+                TripBoard keeps all your bookings, documents, expenses and memories in one place.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+                <button
+                  onClick={handleDemo}
+                  disabled={demoLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors disabled:opacity-60 shadow-sm"
+                >
+                  {demoLoading
+                    ? <><span className="h-4 w-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />Creating…</>
+                    : <><Wand2 className="h-4 w-4" />Explore a sample trip</>
+                  }
+                </button>
+              </div>
+            </div>
+            {/* Steps */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-zinc-100 dark:divide-zinc-800/60 bg-white dark:bg-zinc-900/60">
+              {[
+                { emoji: "📅", title: "Plan your trip", desc: "Add destination, dates and status — it takes 30 seconds." },
+                { emoji: "📄", title: "Import bookings", desc: "Forward confirmation emails or upload PDFs — we extract everything." },
+                { emoji: "💳", title: "Track spending", desc: "Log expenses on the go. See totals and breakdowns instantly." },
+              ].map((step) => (
+                <div key={step.title} className="px-6 py-5 text-center">
+                  <div className="text-2xl mb-2">{step.emoji}</div>
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1">{step.title}</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-relaxed">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((trip, i) => <TripCard key={trip.id} trip={trip} index={i} />)}
@@ -182,6 +206,22 @@ function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
   const gradient = getCardGradient(trip.primaryDestination, trip.status);
   const statusCfg = getStatusConfig(trip.status);
   const ghostText = trip.primaryDestination?.split(",")[0]?.toUpperCase() ?? "";
+
+  // Countdown for upcoming trips
+  const upcomingCountdown = (() => {
+    if (trip.status !== "UPCOMING" || !trip.startsAt) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(trip.startsAt);
+    start.setHours(0, 0, 0, 0);
+    const days = Math.ceil((start.getTime() - today.getTime()) / 86400000);
+    if (days < 0) return null;
+    if (days === 0) return { label: "Today! ✈️", urgent: true };
+    if (days === 1) return { label: "Tomorrow ✈️", urgent: true };
+    if (days <= 7) return { label: `✈️ ${days}d`, urgent: true };
+    if (days <= 30) return { label: `✈️ ${days}d`, urgent: false };
+    return null;
+  })();
 
   // "Day X of Y" for active trips (client-side, runs on render)
   const activeDayInfo = (() => {
@@ -272,9 +312,20 @@ function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
                 )}
               </>
             ) : (
-              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm shadow-sm ${statusCfg.badge}`}>
-                {statusCfg.label}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm shadow-sm ${statusCfg.badge}`}>
+                  {statusCfg.label}
+                </span>
+                {upcomingCountdown && (
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm shadow-sm ${
+                    upcomingCountdown.urgent
+                      ? "bg-amber-500/90 text-white"
+                      : "bg-white/80 dark:bg-zinc-900/80 text-amber-700 dark:text-amber-400"
+                  }`}>
+                    {upcomingCountdown.label}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

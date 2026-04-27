@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { TripGrid } from "@/components/trips/TripGrid";
 import { NewTripButton } from "@/components/trips/NewTripButton";
 import { UserStatsStrip } from "@/components/trips/UserStatsStrip";
+import { NextAdventureCard } from "@/components/trips/NextAdventureCard";
 
 export const metadata: Metadata = { title: "Trip Hub" };
 
@@ -33,6 +34,7 @@ export default async function TripsPage() {
         <NewTripButton />
       </div>
       <UserStatsStrip />
+      <NextAdventureCard />
       <TripGrid />
     </div>
   );
