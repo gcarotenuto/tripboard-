@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
 import type { Expense, ExpenseCategory } from "@tripboard/shared";
 import { EXPENSE_CATEGORY_EMOJIS, EXPENSE_CATEGORY_LABELS, formatCurrency, formatDate } from "@tripboard/shared";
@@ -108,6 +108,8 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     try {
       await fetch(`/api/trips/${tripId}/expenses/${expense.id}`, { method: "DELETE" });
       mutate();
+      globalMutate(`/api/trips/${tripId}/expenses/summary`);
+      globalMutate(`/api/trips/${tripId}/stats`);
       toast("Expense deleted");
     } catch {
       toast("Failed to delete expense", "error");
@@ -141,6 +143,8 @@ export function ExpenseList({ tripId }: { tripId: string }) {
       });
       closeEdit();
       mutate();
+      globalMutate(`/api/trips/${tripId}/expenses/summary`);
+      globalMutate(`/api/trips/${tripId}/stats`);
       toast("Expense updated");
     } catch {
       toast("Failed to save expense", "error");
@@ -158,6 +162,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
         body: JSON.stringify({ isPaid: !expense.isPaid }),
       });
       mutate();
+      globalMutate(`/api/trips/${tripId}/expenses/summary`);
     } catch {
       toast("Failed to update", "error");
     } finally {

@@ -100,6 +100,10 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      setError("End date must be after start date.");
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -258,6 +262,7 @@ export function EditTripModal({ tripId, initialData, open, onClose }: EditTripMo
               <input
                 type="date"
                 value={form.endDate}
+                min={form.startDate || undefined}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                 className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />

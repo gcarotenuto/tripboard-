@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { Trash2, Pencil, X, AlertTriangle } from "lucide-react";
 import type { JournalEntry } from "@tripboard/shared";
 import { formatDate } from "@tripboard/shared";
@@ -79,6 +79,7 @@ export function JournalView({ tripId }: { tripId: string }) {
     try {
       await fetch(`/api/trips/${tripId}/journal/${entry.id}`, { method: "DELETE" });
       mutate();
+      globalMutate(`/api/trips/${tripId}/stats`);
       toast("Entry deleted");
     } catch {
       toast("Failed to delete entry", "error");

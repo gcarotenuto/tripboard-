@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import Link from "next/link";
 import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
 import type { TripEvent, EventType } from "@tripboard/shared";
@@ -168,6 +168,7 @@ export function LogisticsView({ tripId }: { tripId: string }) {
     try {
       await fetch(`/api/trips/${tripId}/events/${event.id}`, { method: "DELETE" });
       mutate();
+      globalMutate(`/api/trips/${tripId}/stats`);
       toast("Event deleted");
     } catch {
       toast("Failed to delete event", "error");
