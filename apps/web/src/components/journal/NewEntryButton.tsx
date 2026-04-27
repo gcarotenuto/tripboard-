@@ -13,6 +13,7 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
+  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -23,7 +24,7 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          date: new Date().toISOString().split("T")[0],
+          date: entryDate,
           mood,
           title,
         }),
@@ -52,7 +53,7 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
           title: title.trim() || undefined,
           content,
           mood,
-          entryDate: new Date().toISOString().split("T")[0],
+          entryDate,
         }),
       });
       if (!res.ok) throw new Error("save failed");
@@ -62,6 +63,7 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
       setTitle("");
       setContent("");
       setMood("");
+      setEntryDate(new Date().toISOString().split("T")[0]);
       setIsOpen(false);
     } catch {
       toast("Failed to save entry — try again", "error");
@@ -81,16 +83,28 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
 
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="New Journal Entry" size="lg">
         <div className="space-y-4">
-          {/* Title */}
-          <div>
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Title <span className="text-zinc-400 font-normal">(optional)</span></label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. First day in Lisbon"
-              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
+          {/* Title + Date row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 sm:col-span-1">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Title <span className="text-zinc-400 font-normal">(optional)</span></label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. First day in Lisbon"
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Date</label>
+              <input
+                type="date"
+                value={entryDate}
+                max={new Date().toISOString().split("T")[0]}
+                onChange={(e) => setEntryDate(e.target.value)}
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
           </div>
 
           {/* Mood picker */}
