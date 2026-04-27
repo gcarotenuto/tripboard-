@@ -52,6 +52,7 @@ export function JournalView({ tripId }: { tripId: string }) {
   const [form, setForm] = useState<EditForm>({ title: "", content: "", mood: "" });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   function openEdit(entry: JournalEntry) {
     setEditingEntry(entry);
@@ -206,9 +207,29 @@ export function JournalView({ tripId }: { tripId: string }) {
                 )}
               </div>
             </div>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-4 whitespace-pre-wrap">
-              {entry.content}
-            </p>
+            {(() => {
+              const isLong = entry.content.length > 400;
+              const isExpanded = expandedIds.has(entry.id);
+              return (
+                <>
+                  <p className={`text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap ${isLong && !isExpanded ? "line-clamp-4" : ""}`}>
+                    {entry.content}
+                  </p>
+                  {isLong && (
+                    <button
+                      onClick={() => setExpandedIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(entry.id)) next.delete(entry.id); else next.add(entry.id);
+                        return next;
+                      })}
+                      className="mt-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
+                    >
+                      {isExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
             {entry.locationName && (
               <p className="mt-3 text-xs text-zinc-400">📍 {entry.locationName}</p>
             )}
