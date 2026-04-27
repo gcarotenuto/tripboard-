@@ -79,11 +79,23 @@ export default function TripMapInner({ tripId }: { tripId: string }) {
 
   if (mapped.length === 0) {
     return (
-      <div className="h-[400px] w-full rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 flex flex-col items-center justify-center gap-3">
-        <span className="text-4xl">🗺️</span>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-xs">
-          No locations mapped yet — add coordinates to your events
-        </p>
+      <div className="h-[400px] w-full rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 flex flex-col items-center justify-center gap-4 p-8">
+        <span className="text-5xl">🗺️</span>
+        <div className="text-center space-y-1.5 max-w-xs">
+          <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">No locations on the map yet</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            Import bookings from the{" "}
+            <span className="font-medium text-indigo-600 dark:text-indigo-400">Document Vault</span>
+            {" "}— TripBoard automatically extracts locations and pins them here.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          {["✈️ Flights", "🏨 Hotels", "🚂 Trains", "🎯 Activities"].map((tag) => (
+            <span key={tag} className="inline-flex items-center rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1 text-xs text-zinc-500 dark:text-zinc-400">
+              {tag}
+            </span>
+          ))}
+        </div>
       </div>
     );
   }

@@ -333,11 +333,36 @@ export function PackingView({ tripId }: { tripId: string }) {
 
       {/* Grouped items */}
       {Object.keys(grouped).length === 0 && !applyingTemplate && (
-        <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-10 text-center">
-          <div className="text-4xl mb-3">🎒</div>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No items yet. Add your first item below or use a template.
-          </p>
+        <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
+          {/* Hero */}
+          <div className="bg-gradient-to-br from-emerald-50/70 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20 px-8 py-7 text-center">
+            <div className="text-5xl mb-3">🎒</div>
+            <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base">Your packing list is empty</h3>
+            <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+              Start from a trip template or add items manually below.
+            </p>
+          </div>
+
+          {/* Template shortcuts */}
+          <div className="border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">Start with a template</p>
+            <div className="grid grid-cols-3 gap-2.5">
+              {Object.entries(TEMPLATES).map(([key, tpl]) => (
+                <button
+                  key={key}
+                  onClick={() => handleApplyTemplate(key)}
+                  disabled={applyingTemplate}
+                  className="group flex flex-col items-center gap-2 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 px-3 py-4 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-all disabled:opacity-50"
+                >
+                  <span className="text-2xl">{tpl.emoji}</span>
+                  <div>
+                    <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">{tpl.label}</p>
+                    <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">{tpl.items.length} items</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

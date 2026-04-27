@@ -108,12 +108,35 @@ export function JournalView({ tripId }: { tripId: string }) {
 
   if (!entries?.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-12 text-center">
-        <div className="text-4xl mb-3">📓</div>
-        <h3 className="font-semibold text-zinc-800 dark:text-zinc-200">No journal entries yet</h3>
-        <p className="mt-1 text-sm text-zinc-500 max-w-xs mx-auto">
-          Tap the <strong>+ Add Entry</strong> button above to capture your first memory from this trip.
-        </p>
+      <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
+        {/* Gradient hero */}
+        <div className="bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-pink-50/30 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-pink-950/10 px-8 py-7 text-center">
+          <div className="text-5xl mb-3">📓</div>
+          <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base">Your travel diary starts here</h3>
+          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+            Write about your day, capture a mood, or just jot a quick note. Every entry becomes part of your Memory Capsule.
+          </p>
+        </div>
+
+        {/* Writing prompts */}
+        <div className="border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">Inspiration to get started</p>
+          <div className="space-y-2">
+            {[
+              { emoji: "🌅", text: "What was the best moment today?" },
+              { emoji: "🍜", text: "Describe the food you tried." },
+              { emoji: "💡", text: "What surprised you most so far?" },
+            ].map(({ emoji, text }) => (
+              <div key={text} className="flex items-center gap-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3.5 py-2.5 text-sm text-zinc-500 dark:text-zinc-400 italic">
+                <span className="shrink-0">{emoji}</span>
+                <span>&ldquo;{text}&rdquo;</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-zinc-400 dark:text-zinc-500 text-center">
+            Tap <strong className="text-zinc-600 dark:text-zinc-300">+ Add Entry</strong> above to write your first entry.
+          </p>
+        </div>
       </div>
     );
   }
