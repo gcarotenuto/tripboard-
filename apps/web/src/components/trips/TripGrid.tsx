@@ -373,6 +373,36 @@ function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
               ))}
             </div>
           )}
+
+          {/* Mini stats strip */}
+          {((trip.eventCount ?? 0) > 0 || (trip.documentCount ?? 0) > 0 || (trip.journalCount ?? 0) > 0) && (
+            <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+              {(trip.eventCount ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                  <span>📅</span>
+                  <span className="tabular-nums font-medium">{trip.eventCount}</span>
+                </span>
+              )}
+              {(trip.documentCount ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                  <span>📄</span>
+                  <span className="tabular-nums font-medium">{trip.documentCount}</span>
+                </span>
+              )}
+              {(trip.journalCount ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                  <span>📓</span>
+                  <span className="tabular-nums font-medium">{trip.journalCount}</span>
+                </span>
+              )}
+              {(trip.expenseCount ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                  <span>💳</span>
+                  <span className="tabular-nums font-medium">{trip.expenseCount}</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </article>
     </Link>

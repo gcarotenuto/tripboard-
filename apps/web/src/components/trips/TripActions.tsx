@@ -2,9 +2,119 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Loader2, AlertTriangle, Archive, Copy, CheckCircle2 } from "lucide-react";
+import { Pencil, Trash2, Loader2, AlertTriangle, Archive, Copy, CheckCircle2, X, Sparkles } from "lucide-react";
 import { EditTripModal } from "./EditTripModal";
 import { useToast } from "@/components/ui/Toast";
+
+interface TripStats {
+  eventCount: number;
+  documentCount: number;
+  journalEntryCount: number;
+  expenseTotal: number;
+  expenseCurrency: string;
+  packingTotal: number;
+  packingPacked: number;
+  startsAt?: string | null;
+}
+
+function CompletionModal({
+  tripTitle,
+  stats,
+  tripId,
+  onClose,
+}: {
+  tripTitle: string;
+  stats: TripStats;
+  tripId: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+
+  const totalDays =
+    stats.startsAt
+      ? Math.max(1, Math.round((Date.now() - new Date(stats.startsAt).getTime()) / 86400000))
+      : null;
+
+  useEffect(() => {
+    // Confetti celebration
+    import("canvas-confetti").then(({ default: confetti }) => {
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.55 },
+        colors: ["#6366f1", "#8b5cf6", "#34d399", "#fbbf24", "#f472b6"] });
+      setTimeout(() =>
+        confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 },
+          colors: ["#6366f1", "#34d399"] }), 300);
+      setTimeout(() =>
+        confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 },
+          colors: ["#f472b6", "#fbbf24"] }), 500);
+    }).catch(() => {});
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+        {/* Header gradient */}
+        <div className="bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 px-6 pt-8 pb-6 text-center">
+          <div className="text-5xl mb-3">🎉</div>
+          <h2 className="text-lg font-bold text-white leading-snug">Trip completed!</h2>
+          <p className="text-sm text-indigo-200 mt-1 font-medium">{tripTitle}</p>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-px bg-zinc-100 dark:bg-zinc-800 border-t border-b border-zinc-100 dark:border-zinc-800">
+          {[
+            { emoji: "📅", label: "Events", value: stats.eventCount },
+            { emoji: "📓", label: "Journal entries", value: stats.journalEntryCount },
+            { emoji: "📄", label: "Documents", value: stats.documentCount },
+            {
+              emoji: "💳",
+              label: "Total spent",
+              value: stats.expenseTotal > 0
+                ? `${Math.round(stats.expenseTotal)} ${stats.expenseCurrency}`
+                : "—",
+            },
+            ...(totalDays ? [{ emoji: "🗓️", label: "Days traveled", value: totalDays }] : []),
+            ...(stats.packingTotal > 0 ? [{
+              emoji: "🧳",
+              label: "Items packed",
+              value: `${stats.packingPacked}/${stats.packingTotal}`,
+            }] : []),
+          ].map(({ emoji, label, value }) => (
+            <div key={label} className="bg-white dark:bg-zinc-900 px-4 py-3 text-center">
+              <div className="text-xl mb-0.5">{emoji}</div>
+              <div className="text-base font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{value}</div>
+              <div className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="p-5 space-y-2.5">
+          <button
+            onClick={() => { router.push(`/trips/${tripId}`); router.refresh(); onClose(); }}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3 text-sm font-semibold text-white hover:from-indigo-700 hover:to-violet-700 transition-all active:scale-95"
+          >
+            <Sparkles className="h-4 w-4" />
+            Generate Memory Capsule
+          </button>
+          <button
+            onClick={() => { router.refresh(); onClose(); }}
+            className="w-full rounded-2xl border border-zinc-200 dark:border-zinc-700 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+          >
+            Done
+          </button>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface TripActionsProps {
   tripId: string;
@@ -28,6 +138,7 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
   const [archiving, setArchiving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [completionStats, setCompletionStats] = useState<TripStats | null>(null);
 
   // ESC to cancel delete confirmation
   useEffect(() => {
@@ -59,14 +170,17 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      const res = await fetch(`/api/trips/${tripId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "COMPLETED" }),
-      });
-      if (res.ok) {
-        toast("🎉 Trip marked as completed!");
-        router.refresh();
+      const [patchRes, statsRes] = await Promise.all([
+        fetch(`/api/trips/${tripId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "COMPLETED" }),
+        }),
+        fetch(`/api/trips/${tripId}/stats`),
+      ]);
+      if (patchRes.ok) {
+        const statsJson = await statsRes.json().catch(() => ({}));
+        setCompletionStats(statsJson.data ?? null);
       } else {
         toast("Failed to update trip status", "error");
       }
@@ -174,6 +288,16 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
         open={editOpen}
         onClose={() => setEditOpen(false)}
       />
+
+      {/* Completion celebration modal */}
+      {completionStats && (
+        <CompletionModal
+          tripTitle={tripData.title}
+          stats={completionStats}
+          tripId={tripId}
+          onClose={() => setCompletionStats(null)}
+        />
+      )}
 
       {/* Delete confirmation */}
       {deleteOpen && (

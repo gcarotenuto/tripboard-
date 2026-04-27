@@ -71,5 +71,7 @@ export interface TripSummary {
   tags: string[];
   eventCount?: number;
   documentCount?: number;
+  journalCount?: number;
+  expenseCount?: number;
   expenseTotal?: number;
 }

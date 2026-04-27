@@ -23,6 +23,16 @@ export async function GET(req: Request) {
       ...(statuses ? { status: { in: statuses } } : {}),
     },
     orderBy: { startsAt: "desc" },
+    include: {
+      _count: {
+        select: {
+          events: true,
+          documents: true,
+          journals: true,
+          expenses: true,
+        },
+      },
+    },
   });
 
   // Auto-update statuses that have drifted (fire-and-forget, best effort)
@@ -38,15 +48,22 @@ export async function GET(req: Request) {
   }
   if (updates.length) await Promise.all(updates);
 
-  const parsed = trips.map((t) => ({
-    ...t,
-    tags: (() => { try { return JSON.parse(t.tags || "[]"); } catch { return []; } })(),
-    destinations: (() => { try { return JSON.parse(t.destinations || "[]"); } catch { return []; } })(),
-    memoryCapsule: (() => {
-      if (!t.memoryCapsule) return null;
-      try { return JSON.parse(t.memoryCapsule as unknown as string); } catch { return null; }
-    })(),
-  }));
+  const parsed = trips.map((t) => {
+    const { _count, ...rest } = t;
+    return {
+      ...rest,
+      tags: (() => { try { return JSON.parse(t.tags || "[]"); } catch { return []; } })(),
+      destinations: (() => { try { return JSON.parse(t.destinations || "[]"); } catch { return []; } })(),
+      memoryCapsule: (() => {
+        if (!t.memoryCapsule) return null;
+        try { return JSON.parse(t.memoryCapsule as unknown as string); } catch { return null; }
+      })(),
+      eventCount: _count.events,
+      documentCount: _count.documents,
+      journalCount: _count.journals,
+      expenseCount: _count.expenses,
+    };
+  });
 
   return NextResponse.json({ data: parsed });
 }
