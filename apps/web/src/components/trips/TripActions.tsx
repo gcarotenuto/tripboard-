@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Loader2, AlertTriangle, Archive, Copy } from "lucide-react";
 import { EditTripModal } from "./EditTripModal";
@@ -27,6 +27,14 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
   const [deleting, setDeleting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+
+  // ESC to cancel delete confirmation
+  useEffect(() => {
+    if (!deleteOpen || deleting) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setDeleteOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [deleteOpen, deleting]);
 
   const handleDuplicate = async () => {
     setDuplicating(true);
