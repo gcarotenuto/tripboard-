@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
 import type { Expense, ExpenseCategory } from "@tripboard/shared";
@@ -94,6 +94,14 @@ export function ExpenseList({ tripId }: { tripId: string }) {
   function closeEdit() {
     setEditingExpense(null);
   }
+
+  // ESC to close edit modal
+  useEffect(() => {
+    if (!editingExpense) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeEdit(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [editingExpense]);
 
   async function handleDelete(expense: Expense) {
     setDeletingId(null);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
@@ -154,6 +154,14 @@ export function LogisticsView({ tripId }: { tripId: string }) {
   function closeEdit() {
     setEditingEvent(null);
   }
+
+  // ESC to close edit modal
+  useEffect(() => {
+    if (!editingEvent) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeEdit(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [editingEvent]);
 
   async function handleDelete(event: TripEvent) {
     setDeletingId(null);

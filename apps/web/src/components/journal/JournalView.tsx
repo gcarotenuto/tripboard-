@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { Trash2, Pencil, X, AlertTriangle } from "lucide-react";
 import type { JournalEntry } from "@tripboard/shared";
@@ -65,6 +65,14 @@ export function JournalView({ tripId }: { tripId: string }) {
   function closeEdit() {
     setEditingEntry(null);
   }
+
+  // ESC to close edit modal
+  useEffect(() => {
+    if (!editingEntry) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeEdit(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [editingEntry]);
 
   async function handleDelete(entry: JournalEntry) {
     setDeletingId(null);
