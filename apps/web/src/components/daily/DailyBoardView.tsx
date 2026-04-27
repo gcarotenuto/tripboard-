@@ -3,8 +3,106 @@
 import { useState, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { Plus, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Sparkles, Loader2, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+
+interface TripSummaryMin {
+  id: string;
+  title: string;
+  primaryDestination: string | null;
+  status: string;
+  startsAt: string | null;
+}
+
+function NoActiveTripState() {
+  const { data: trips } = useSWR<TripSummaryMin[]>("/api/trips", (url: string) =>
+    fetch(url).then((r) => r.json()).then((r) => r.data)
+  );
+
+  const upcoming = trips
+    ?.filter((t) => t.status === "UPCOMING" && t.startsAt)
+    .sort((a, b) => new Date(a.startsAt!).getTime() - new Date(b.startsAt!).getTime());
+
+  const nextTrip = upcoming?.[0] ?? null;
+
+  const daysUntil = nextTrip?.startsAt
+    ? Math.ceil((new Date(nextTrip.startsAt).getTime() - Date.now()) / 86400000)
+    : null;
+
+  const recentTrips = trips?.filter((t) => ["PLANNING", "UPCOMING", "COMPLETED"].includes(t.status)).slice(0, 3);
+
+  return (
+    <div className="space-y-4">
+      {/* Next trip countdown */}
+      {nextTrip && daysUntil !== null && (
+        <Link href={`/trips/${nextTrip.id}`}>
+          <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 p-5 group cursor-pointer hover:shadow-lg hover:shadow-indigo-900/20 transition-all">
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-200 mb-2">Coming up</p>
+            <h3 className="text-lg font-bold text-white mb-1">{nextTrip.title}</h3>
+            {nextTrip.primaryDestination && (
+              <p className="text-sm text-indigo-200 mb-3">📍 {nextTrip.primaryDestination}</p>
+            )}
+            <div className="flex items-center justify-between">
+              <div className="bg-white/20 rounded-xl px-4 py-2">
+                <p className="text-2xl font-black text-white tabular-nums">{daysUntil}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200">
+                  {daysUntil === 1 ? "day left" : "days left"}
+                </p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-indigo-300 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* No upcoming trip message */}
+      {!nextTrip && (
+        <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 p-10 text-center">
+          <p className="text-3xl mb-3">🌴</p>
+          <p className="font-semibold text-zinc-700 dark:text-zinc-300 mb-1">No active trip today</p>
+          <p className="text-sm text-zinc-400 dark:text-zinc-500 max-w-xs mx-auto mb-4">
+            Start planning your next adventure and it'll show up here when you're traveling.
+          </p>
+          <Link
+            href="/trips"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+          >
+            Plan a trip ✈️
+          </Link>
+        </div>
+      )}
+
+      {/* Recent trips */}
+      {recentTrips && recentTrips.length > 0 && (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">Your trips</p>
+          <div className="space-y-2">
+            {recentTrips.map((trip) => (
+              <Link
+                key={trip.id}
+                href={`/trips/${trip.id}`}
+                className="flex items-center gap-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors group"
+              >
+                <span className="text-xl">
+                  {trip.status === "UPCOMING" ? "🟡" : trip.status === "PLANNING" ? "⚪" : "✅"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
+                    {trip.title}
+                  </p>
+                  {trip.primaryDestination && (
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">{trip.primaryDestination}</p>
+                  )}
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-700 group-hover:text-indigo-500 transition-colors shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ChecklistItem {
   id: string;
@@ -162,15 +260,7 @@ export function DailyBoardView() {
   );
 
   if (!data) {
-    return (
-      <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 p-12 text-center">
-        <p className="text-3xl mb-3">🌴</p>
-        <p className="font-semibold text-zinc-700 dark:text-zinc-300 mb-1">No active trip today</p>
-        <p className="text-sm text-zinc-400 dark:text-zinc-500 max-w-xs mx-auto">
-          When you have an active trip covering today, your operational briefing will appear here.
-        </p>
-      </div>
-    );
+    return <NoActiveTripState />;
   }
 
   const unacknowledgedReminders = data.reminders?.filter((r) => !r.acknowledged) ?? [];

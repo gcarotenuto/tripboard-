@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import type { ExpenseSummary, ExpenseCategory } from "@tripboard/shared";
 import { EXPENSE_CATEGORY_COLORS, EXPENSE_CATEGORY_LABELS, formatCurrency } from "@tripboard/shared";
@@ -142,6 +142,15 @@ export function ExpenseSummaryCard({ tripId }: { tripId: string }) {
     `/api/trips/${tripId}/expenses/summary`,
     fetcher
   );
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    if (summary) {
+      // Stagger: let paint happen first, then animate bars
+      const t = setTimeout(() => setAnimated(true), 80);
+      return () => clearTimeout(t);
+    }
+  }, [summary]);
 
   if (!summary) return null;
 
@@ -184,9 +193,10 @@ export function ExpenseSummaryCard({ tripId }: { tripId: string }) {
                 fill="none"
                 stroke={arc.color}
                 strokeWidth="3"
-                strokeDasharray={arc.dasharray}
-                strokeDashoffset={arc.dashoffset}
+                strokeDasharray={animated ? arc.dasharray : "0 100"}
+                strokeDashoffset={animated ? arc.dashoffset : 100}
                 strokeLinecap="butt"
+                style={{ transition: `stroke-dasharray 0.6s ease ${i * 100 + 200}ms, stroke-dashoffset 0.6s ease ${i * 100 + 200}ms` }}
               />
             ))}
           </svg>
@@ -216,23 +226,32 @@ export function ExpenseSummaryCard({ tripId }: { tripId: string }) {
       </div>
 
       {/* Category legend + bars */}
-      <div className="space-y-2">
-        {categories.slice(0, 5).map(([category, amount]) => {
+      <div className="space-y-2.5">
+        {categories.slice(0, 6).map(([category, amount], idx) => {
           const pct = Math.round((amount / summary.totalUsd) * 100);
           const color = EXPENSE_CATEGORY_COLORS[category] ?? "#6b7280";
           return (
-            <div key={category}>
+            <div key={category} style={{ transitionDelay: `${idx * 60}ms` }}>
               <div className="flex justify-between text-xs mb-1">
-                <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                   {EXPENSE_CATEGORY_LABELS[category] ?? category}
                 </span>
-                <span className="text-zinc-500 dark:text-zinc-500">{pct}%</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-zinc-400 dark:text-zinc-500 text-[11px]">{pct}%</span>
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                    {formatCurrency(amount, "USD")}
+                  </span>
+                </div>
               </div>
-              <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+              <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${pct}%`, backgroundColor: color }}
+                  className="h-full rounded-full"
+                  style={{
+                    width: animated ? `${pct}%` : "0%",
+                    backgroundColor: color,
+                    transition: `width 0.6s cubic-bezier(0.4, 0, 0.2, 1) ${idx * 60}ms`,
+                  }}
                 />
               </div>
             </div>

@@ -353,9 +353,31 @@ export function PackingView({ tripId }: { tripId: string }) {
               <span className="flex-1 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                 {CATEGORY_LABEL[cat]}
               </span>
-              <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium tabular-nums">
+              <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium tabular-nums mr-2">
                 {catPacked}/{catItems.length}
               </span>
+              {catPacked < catItems.length ? (
+                <button
+                  onClick={async () => {
+                    await Promise.all(
+                      catItems.filter((i) => !i.isPacked).map((i) =>
+                        fetch(`/api/trips/${tripId}/packing/${i.id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ isPacked: true }),
+                        })
+                      )
+                    );
+                    globalMutate(apiKey);
+                  }}
+                  className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                  title="Mark all packed"
+                >
+                  Pack all
+                </button>
+              ) : (
+                <span className="text-[10px] font-semibold text-emerald-500">✓ Done</span>
+              )}
             </div>
 
             {/* Items */}
