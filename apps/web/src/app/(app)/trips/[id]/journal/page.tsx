@@ -1,11 +1,23 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { JournalView } from "@/components/journal/JournalView";
 import { NewEntryButton } from "@/components/journal/NewEntryButton";
 
-export const metadata: Metadata = { title: "Journal" };
-
 interface JournalPageProps {
   params: { id: string };
+}
+
+export async function generateMetadata({ params }: JournalPageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Journal" };
+  const userId = (session.user as { id: string }).id;
+  const trip = await prisma.trip.findFirst({
+    where: { id: params.id, userId, deletedAt: null },
+    select: { title: true },
+  });
+  return { title: trip ? `${trip.title} — Journal` : "Journal" };
 }
 
 export default function JournalPage({ params }: JournalPageProps) {

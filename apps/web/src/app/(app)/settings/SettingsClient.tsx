@@ -73,6 +73,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveName(); }}
                 className={INPUT}
               />
               <button

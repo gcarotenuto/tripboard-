@@ -1,12 +1,24 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { DocumentVault } from "@/components/vault/DocumentVault";
 import { UploadButton } from "@/components/vault/UploadButton";
 import { VaultImportMethods } from "@/components/vault/VaultImportMethods";
 
-export const metadata: Metadata = { title: "Document Vault" };
-
 interface VaultPageProps {
   params: { id: string };
+}
+
+export async function generateMetadata({ params }: VaultPageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Document Vault" };
+  const userId = (session.user as { id: string }).id;
+  const trip = await prisma.trip.findFirst({
+    where: { id: params.id, userId, deletedAt: null },
+    select: { title: true },
+  });
+  return { title: trip ? `${trip.title} — Vault` : "Document Vault" };
 }
 
 export default function VaultPage({ params }: VaultPageProps) {

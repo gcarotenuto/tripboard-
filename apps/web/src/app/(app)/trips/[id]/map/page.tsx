@@ -1,10 +1,22 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { TripMap } from "@/components/map/TripMap";
-
-export const metadata: Metadata = { title: "Trip Map" };
 
 interface MapPageProps {
   params: { id: string };
+}
+
+export async function generateMetadata({ params }: MapPageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Trip Map" };
+  const userId = (session.user as { id: string }).id;
+  const trip = await prisma.trip.findFirst({
+    where: { id: params.id, userId, deletedAt: null },
+    select: { title: true },
+  });
+  return { title: trip ? `${trip.title} — Map` : "Trip Map" };
 }
 
 export default function TripMapPage({ params }: MapPageProps) {

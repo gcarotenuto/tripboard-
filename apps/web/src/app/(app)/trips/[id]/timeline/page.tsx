@@ -1,14 +1,26 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { TimelineView } from "@/components/timeline/TimelineView";
 import { ViewToggle } from "@/components/timeline/ViewToggle";
 import { NewEventButton } from "@/components/timeline/NewEventButton";
 import { CalendarDays } from "lucide-react";
 
-export const metadata: Metadata = { title: "Timeline" };
-
 interface TimelinePageProps {
   params: { id: string };
   searchParams: { view?: string };
+}
+
+export async function generateMetadata({ params }: TimelinePageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Timeline" };
+  const userId = (session.user as { id: string }).id;
+  const trip = await prisma.trip.findFirst({
+    where: { id: params.id, userId, deletedAt: null },
+    select: { title: true },
+  });
+  return { title: trip ? `${trip.title} — Timeline` : "Timeline" };
 }
 
 export default function TimelinePage({ params, searchParams }: TimelinePageProps) {

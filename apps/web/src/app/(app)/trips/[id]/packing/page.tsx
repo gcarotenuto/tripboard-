@@ -1,11 +1,23 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { PackingView } from "@/components/packing/PackingView";
 import { AiPackingButton } from "@/components/packing/AiPackingButton";
 
-export const metadata: Metadata = { title: "Packing List" };
-
 interface PackingPageProps {
   params: { id: string };
+}
+
+export async function generateMetadata({ params }: PackingPageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Packing List" };
+  const userId = (session.user as { id: string }).id;
+  const trip = await prisma.trip.findFirst({
+    where: { id: params.id, userId, deletedAt: null },
+    select: { title: true },
+  });
+  return { title: trip ? `${trip.title} — Packing` : "Packing List" };
 }
 
 export default function PackingPage({ params }: PackingPageProps) {

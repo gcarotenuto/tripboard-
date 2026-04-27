@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
 import { ExpenseSummaryCard } from "@/components/expenses/ExpenseSummaryCard";
 import { NewExpenseButton } from "@/components/expenses/NewExpenseButton";
 import { Download } from "lucide-react";
 
-export const metadata: Metadata = { title: "Expenses" };
-
 interface ExpensesPageProps {
   params: { id: string };
+}
+
+export async function generateMetadata({ params }: ExpensesPageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Expenses" };
+  const userId = (session.user as { id: string }).id;
+  const trip = await prisma.trip.findFirst({
+    where: { id: params.id, userId, deletedAt: null },
+    select: { title: true },
+  });
+  return { title: trip ? `${trip.title} — Expenses` : "Expenses" };
 }
 
 export default function ExpensesPage({ params }: ExpensesPageProps) {
