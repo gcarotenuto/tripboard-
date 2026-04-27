@@ -30,17 +30,22 @@ export function VaultImportMethods({ tripId }: Props) {
       return;
     }
     setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("tripId", tripId);
-    const res = await fetch("/api/documents/upload", { method: "POST", body: formData });
-    setUploading(false);
-    if (res.ok) {
-      setUploadDone("Uploaded!");
-      mutate(`/api/trips/${tripId}/documents`);
-      setTimeout(() => setUploadDone(""), 3000);
-    } else {
-      setUploadError("Upload failed.");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("tripId", tripId);
+      const res = await fetch("/api/documents/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        setUploadDone("Uploaded!");
+        mutate(`/api/trips/${tripId}/documents`);
+        setTimeout(() => setUploadDone(""), 3000);
+      } else {
+        setUploadError("Upload failed — please try again.");
+      }
+    } catch {
+      setUploadError("Network error — check your connection.");
+    } finally {
+      setUploading(false);
     }
   }
 

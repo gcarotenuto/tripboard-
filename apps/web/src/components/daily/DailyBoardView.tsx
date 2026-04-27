@@ -204,12 +204,17 @@ export function DailyBoardView() {
   async function persistChecklist(updated: ChecklistItem[]) {
     if (!data?.tripId) return;
     setChecklist(updated);
-    await fetch("/api/daily/checklist", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tripId: data.tripId, date: today, checklist: updated }),
-    });
-    mutate();
+    try {
+      await fetch("/api/daily/checklist", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId: data.tripId, date: today, checklist: updated }),
+      });
+      mutate();
+    } catch {
+      // Optimistic UI already applied; silently tolerate network blips
+      // (checklist will re-sync on next SWR refresh)
+    }
   }
 
   const toggleItem = (id: string) => {
