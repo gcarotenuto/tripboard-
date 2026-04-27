@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
+import Link from "next/link";
 import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
 import type { TripEvent, EventType } from "@tripboard/shared";
 import {
@@ -203,12 +204,51 @@ export function LogisticsView({ tripId }: { tripId: string }) {
   );
 
   if (!events?.length) return (
-    <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-12 text-center">
-      <div className="text-4xl mb-3">📋</div>
-      <h3 className="font-semibold text-zinc-800 dark:text-zinc-200">No bookings yet</h3>
-      <p className="mt-1 text-sm text-zinc-500">
-        Upload a booking confirmation or forward an email to add your first event.
-      </p>
+    <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
+      {/* Hero banner */}
+      <div className="bg-gradient-to-br from-indigo-50/80 to-violet-50/50 dark:from-indigo-950/30 dark:to-violet-950/20 px-8 py-7 text-center">
+        <div className="text-5xl mb-3">✈️</div>
+        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base">No bookings yet</h3>
+        <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+          TripBoard reads your confirmation emails and PDFs — extracting flight times, hotel check-ins, and transfers automatically.
+        </p>
+      </div>
+
+      {/* Import method cards */}
+      <div className="border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">3 ways to get started</p>
+        <div className="grid grid-cols-3 gap-2.5">
+          <Link
+            href={`/trips/${tripId}/vault`}
+            className="group flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 px-3 py-4 text-center hover:border-blue-400 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all"
+          >
+            <span className="text-2xl">📧</span>
+            <div>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">Forward email</p>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 leading-tight">AI extracts in seconds</p>
+            </div>
+          </Link>
+
+          <Link
+            href={`/trips/${tripId}/vault`}
+            className="group flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-violet-200 dark:border-violet-900 bg-violet-50/50 dark:bg-violet-950/20 px-3 py-4 text-center hover:border-violet-400 dark:hover:border-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950/40 transition-all"
+          >
+            <span className="text-2xl">📄</span>
+            <div>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 group-hover:text-violet-700 dark:group-hover:text-violet-400 transition-colors">Upload PDF</p>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 leading-tight">Confirmations &amp; vouchers</p>
+            </div>
+          </Link>
+
+          <div className="flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-4 text-center">
+            <span className="text-2xl">✏️</span>
+            <div>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Add manually</p>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 leading-tight">Use "+ Add Event" above</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 

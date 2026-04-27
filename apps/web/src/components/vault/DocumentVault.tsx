@@ -81,12 +81,45 @@ export function DocumentVault({ tripId }: { tripId: string }) {
   );
 
   if (!documents?.length) return (
-    <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-12 text-center">
-      <div className="text-4xl mb-3">🗄️</div>
-      <h3 className="font-semibold text-zinc-800 dark:text-zinc-200">Vault is empty</h3>
-      <p className="mt-1 text-sm text-zinc-500 max-w-xs mx-auto">
-        Upload a PDF or forward a booking confirmation email — TripBoard extracts the details automatically.
-      </p>
+    <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-zinc-50 to-slate-50/80 dark:from-zinc-900 dark:to-zinc-800/50 px-8 py-7 text-center">
+        <div className="text-5xl mb-3">🗄️</div>
+        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base">Vault is empty</h3>
+        <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+          Use the import panel above — TripBoard will extract and organise everything automatically.
+        </p>
+      </div>
+
+      {/* Document type preview pills */}
+      <div className="border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-4">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">Supported document types</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { emoji: "✈️", label: "Flight tickets" },
+            { emoji: "🏨", label: "Hotel bookings" },
+            { emoji: "🚂", label: "Train passes" },
+            { emoji: "🎫", label: "Event tickets" },
+            { emoji: "🪪", label: "Visas & ID" },
+            { emoji: "🚗", label: "Car rentals" },
+            { emoji: "🧾", label: "Receipts" },
+            { emoji: "📋", label: "Insurance" },
+          ].map(({ emoji, label }) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-1 text-xs text-zinc-600 dark:text-zinc-400"
+            >
+              <span>{emoji}</span>
+              <span>{label}</span>
+            </span>
+          ))}
+        </div>
+
+        <p className="mt-4 flex items-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-600">
+          <span>🔒</span>
+          <span>Documents are parsed privately — we never scan your inbox automatically.</span>
+        </p>
+      </div>
     </div>
   );
 

@@ -62,12 +62,40 @@ export function ArchiveGrid() {
 
   if (!trips?.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-16 text-center">
-        <div className="text-5xl mb-4">🗺️</div>
-        <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 text-lg">Archive is empty</h3>
-        <p className="mt-2 text-sm text-zinc-500 max-w-sm mx-auto">
-          When you complete a trip, TripBoard creates a permanent Memory Capsule — your documents, story, and stats preserved forever.
-        </p>
+      <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
+        {/* Hero */}
+        <div className="bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-rose-50/30 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-rose-950/10 px-8 py-10 text-center">
+          <div className="text-6xl mb-4">🗺️</div>
+          <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-lg">No completed trips yet</h3>
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
+            When you mark a trip as completed, TripBoard generates a <span className="font-medium text-zinc-700 dark:text-zinc-300">Memory Capsule</span> — your story, stats, and highlights preserved forever.
+          </p>
+          <Link
+            href="/trips"
+            className="inline-flex items-center gap-2 mt-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-medium text-white transition-colors"
+          >
+            ✈️ Go to your trips
+          </Link>
+        </div>
+
+        {/* What a Memory Capsule contains */}
+        <div className="border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-4">What each Memory Capsule includes</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { emoji: "📖", label: "AI trip summary", desc: "A written story of your adventure" },
+              { emoji: "✦", label: "Highlights", desc: "Best moments, picked by AI" },
+              { emoji: "📊", label: "Stats", desc: "Days, cities, expenses" },
+              { emoji: "🗄️", label: "Documents", desc: "All your saved files" },
+            ].map(({ emoji, label, desc }) => (
+              <div key={label} className="flex flex-col gap-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                <span className="text-xl">{emoji}</span>
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{label}</p>
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 leading-tight">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
