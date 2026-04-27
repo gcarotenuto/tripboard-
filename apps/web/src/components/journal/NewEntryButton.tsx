@@ -57,6 +57,7 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
       });
       if (!res.ok) throw new Error("save failed");
       await mutate(`/api/trips/${tripId}/journal`);
+      mutate(`/api/trips/${tripId}/stats`);
       toast("Journal entry saved 📓");
       setTitle("");
       setContent("");
