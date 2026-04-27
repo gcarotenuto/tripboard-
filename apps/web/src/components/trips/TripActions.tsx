@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Loader2, AlertTriangle, Archive, Copy } from "lucide-react";
+import { Pencil, Trash2, Loader2, AlertTriangle, Archive, Copy, CheckCircle2 } from "lucide-react";
 import { EditTripModal } from "./EditTripModal";
 import { useToast } from "@/components/ui/Toast";
 
@@ -26,6 +26,7 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
 
   // ESC to cancel delete confirmation
@@ -52,6 +53,27 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
       toast("Failed to duplicate trip", "error");
     } finally {
       setDuplicating(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    setCompleting(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "COMPLETED" }),
+      });
+      if (res.ok) {
+        toast("🎉 Trip marked as completed!");
+        router.refresh();
+      } else {
+        toast("Failed to update trip status", "error");
+      }
+    } catch {
+      toast("Failed to update trip status", "error");
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -116,6 +138,17 @@ export function TripActions({ tripId, tripData }: TripActionsProps) {
           {duplicating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Copy className="h-3 w-3" />}
           Duplicate
         </button>
+        {!["COMPLETED", "ARCHIVED"].includes(tripData.status) && (
+          <button
+            onClick={handleComplete}
+            disabled={completing}
+            title="Mark trip as completed"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/80 dark:border-zinc-700 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:border-emerald-300 hover:text-emerald-700 dark:hover:border-emerald-700 dark:hover:text-emerald-400 transition-all shadow-sm disabled:opacity-40"
+          >
+            {completing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+            Complete
+          </button>
+        )}
         <button
           onClick={handleArchive}
           disabled={archiving || tripData.status === "ARCHIVED"}
