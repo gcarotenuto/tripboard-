@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Share2, Copy, Check, EyeOff, Globe } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface ShareButtonProps {
   tripId: string;
@@ -10,6 +11,7 @@ interface ShareButtonProps {
 }
 
 export function ShareButton({ tripId, initialToken, initialPublic }: ShareButtonProps) {
+  const { toast } = useToast();
   const [open, setOpen]         = useState(false);
   const [isPublic, setIsPublic] = useState(initialPublic ?? false);
   const [token, setToken]       = useState(initialToken ?? null);
@@ -20,27 +22,58 @@ export function ShareButton({ tripId, initialToken, initialPublic }: ShareButton
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/p/${token}`
     : null;
 
+  // ESC to close popover
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
+
   async function enable() {
     setLoading(true);
-    const res  = await fetch(`/api/trips/${tripId}/share`, { method: "POST" });
-    const body = await res.json();
-    if (res.ok) {
-      setToken(body.data.shareToken);
-      setIsPublic(true);
+    try {
+      const res  = await fetch(`/api/trips/${tripId}/share`, { method: "POST" });
+      const body = await res.json();
+      if (res.ok) {
+        setToken(body.data.shareToken);
+        setIsPublic(true);
+      } else {
+        toast("Failed to enable sharing — please try again", "error");
+      }
+    } catch {
+      toast("Network error — please check your connection", "error");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function disable() {
     setLoading(true);
-    await fetch(`/api/trips/${tripId}/share`, { method: "DELETE" });
-    setIsPublic(false);
-    setLoading(false);
+    try {
+      await fetch(`/api/trips/${tripId}/share`, { method: "DELETE" });
+      setIsPublic(false);
+    } catch {
+      toast("Failed to disable sharing — please try again", "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function copyLink() {
     if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // Fallback for older browsers
+      const el = document.createElement("textarea");
+      el.value = shareUrl;
+      el.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
