@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
 import type { Document } from "@tripboard/shared";
 import { DOCUMENT_TYPE_EMOJIS, DOCUMENT_TYPE_LABELS, formatFileSize, formatDate } from "@tripboard/shared";
 import { Badge } from "@tripboard/ui";
+import { Trash2, AlertTriangle } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -56,10 +59,25 @@ function isReadyToday(doc: Document): boolean {
 }
 
 export function DocumentVault({ tripId }: { tripId: string }) {
-  const { data: documents, isLoading, error } = useSWR<Document[]>(
+  const { data: documents, isLoading, error, mutate } = useSWR<Document[]>(
     `/api/trips/${tripId}/documents`,
     fetcher
   );
+  const { toast } = useToast();
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  // "_cancel_" is a sentinel value meaning "clear the pending delete"
+  function requestDelete(id: string) { setDeletingDocId(id === "_cancel_" ? null : id); }
+
+  async function handleDeleteDoc(doc: Document) {
+    setDeletingDocId(null);
+    try {
+      await fetch(`/api/trips/${tripId}/documents/${doc.id}`, { method: "DELETE" });
+      mutate();
+      toast("Document removed");
+    } catch {
+      toast("Failed to remove document", "error");
+    }
+  }
 
   if (isLoading) return (
     <div className="space-y-3 animate-pulse">
@@ -129,6 +147,8 @@ export function DocumentVault({ tripId }: { tripId: string }) {
   );
   const rest = documents.filter((d) => !readyToday.includes(d) && !needsReview.includes(d));
 
+  const rowProps = { deletingDocId, onDeleteRequest: requestDelete, onDeleteConfirm: handleDeleteDoc };
+
   return (
     <div className="space-y-6">
       {/* Ready Today bundle */}
@@ -140,7 +160,7 @@ export function DocumentVault({ tripId }: { tripId: string }) {
             <span className="text-xs text-zinc-400 dark:text-zinc-500">— documents relevant for today</span>
           </div>
           <div className="space-y-2">
-            {readyToday.map((doc) => <DocumentRow key={doc.id} doc={doc} highlight />)}
+            {readyToday.map((doc) => <DocumentRow key={doc.id} doc={doc} highlight {...rowProps} />)}
           </div>
         </section>
       )}
@@ -154,7 +174,7 @@ export function DocumentVault({ tripId }: { tripId: string }) {
             <span className="text-xs text-zinc-400 dark:text-zinc-500">— low extraction confidence</span>
           </div>
           <div className="space-y-2">
-            {needsReview.map((doc) => <DocumentRow key={doc.id} doc={doc} warn />)}
+            {needsReview.map((doc) => <DocumentRow key={doc.id} doc={doc} warn {...rowProps} />)}
           </div>
         </section>
       )}
@@ -168,7 +188,7 @@ export function DocumentVault({ tripId }: { tripId: string }) {
             </h3>
           )}
           <div className="space-y-2">
-            {rest.map((doc) => <DocumentRow key={doc.id} doc={doc} />)}
+            {rest.map((doc) => <DocumentRow key={doc.id} doc={doc} {...rowProps} />)}
           </div>
         </section>
       )}
@@ -180,18 +200,25 @@ function DocumentRow({
   doc,
   highlight,
   warn,
+  deletingDocId,
+  onDeleteRequest,
+  onDeleteConfirm,
 }: {
   doc: Document;
   highlight?: boolean;
   warn?: boolean;
+  deletingDocId: string | null;
+  onDeleteRequest: (idOrCancel: string) => void;
+  onDeleteConfirm: (doc: Document) => void;
 }) {
   const status = STATUS_BADGE[doc.status] ?? STATUS_BADGE.PENDING;
   const sourceInfo = SOURCE_LABEL[doc.source ?? "MANUAL"] ?? SOURCE_LABEL.MANUAL;
   const confidence = doc.extractionConfidence as unknown as number | null;
+  const isConfirming = deletingDocId === doc.id;
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-2xl border p-4 transition-colors ${
+      className={`group flex items-start gap-3 rounded-2xl border p-4 transition-colors ${
         highlight
           ? "border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20"
           : warn
@@ -210,9 +237,34 @@ function DocumentRow({
           <p className="font-medium text-sm text-zinc-900 dark:text-zinc-100 truncate">
             {doc.filename}
           </p>
-          <Badge variant={status.variant} className="shrink-0 text-xs">
-            {status.label}
-          </Badge>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant={status.variant} className="text-xs">
+              {status.label}
+            </Badge>
+            {/* Delete control */}
+            {isConfirming ? (
+              <div className="flex items-center gap-1 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-2 py-0.5">
+                <AlertTriangle size={10} className="text-red-500 shrink-0" />
+                <button
+                  onClick={() => onDeleteConfirm(doc)}
+                  className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
+                >Yes</button>
+                <span className="text-red-300 dark:text-red-800 text-[10px]">·</span>
+                <button
+                  onClick={() => onDeleteRequest("_cancel_")}
+                  className="text-[11px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                >No</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => onDeleteRequest(doc.id)}
+                className="p-1 rounded-lg text-zinc-300 dark:text-zinc-700 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-all"
+                title="Remove document"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Metadata row */}
