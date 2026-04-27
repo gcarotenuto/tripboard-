@@ -28,6 +28,13 @@ function QuickExpenseSheet({ tripId, onClose }: { tripId: string; onClose: () =>
   const [form, setForm] = useState<QuickForm>({ title: "", amount: "", currency: "EUR", category: "FOOD" });
   const [saving, setSaving] = useState(false);
 
+  // ESC to close
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.amount) return;

@@ -1,7 +1,39 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plane } from "lucide-react";
+
+interface Props { params: { token: string } }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const trip = await prisma.trip.findUnique({
+    where: { shareToken: params.token },
+    select: { title: true, description: true, primaryDestination: true, isPublic: true },
+  });
+
+  if (!trip || !trip.isPublic) return {};
+
+  const dest = trip.primaryDestination ? ` · ${trip.primaryDestination}` : "";
+  const title = `${trip.title}${dest} — TripBoard`;
+  const description = trip.description ?? "View this travel itinerary on TripBoard";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: "TripBoard",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 const EVENT_TYPE_EMOJI: Record<string, string> = {
   FLIGHT: "✈️", TRAIN: "🚄", BUS: "🚌", FERRY: "⛴️",
@@ -21,8 +53,6 @@ function formatTime(d: Date | null) {
   if (!d) return null;
   return new Date(d).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
-
-interface Props { params: { token: string } }
 
 export default async function PublicTripPage({ params }: Props) {
   const trip = await prisma.trip.findUnique({
