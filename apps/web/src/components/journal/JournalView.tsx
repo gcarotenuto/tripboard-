@@ -230,7 +230,14 @@ export function JournalView({ tripId }: { tripId: string }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1">Content <span className="text-red-400">*</span></label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-zinc-500">Content <span className="text-red-400">*</span></label>
+                  {form.content.trim() && (
+                    <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                      {form.content.trim().split(/\s+/).filter(Boolean).length} words
+                    </span>
+                  )}
+                </div>
                 <textarea
                   rows={6}
                   className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"

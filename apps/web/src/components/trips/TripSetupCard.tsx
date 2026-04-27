@@ -44,16 +44,16 @@ export function TripSetupCard({ tripId, tripStatus, hasDestination, hasDates }: 
     {
       key: "destination",
       label: "Set a destination",
-      hint: "Add where you're heading",
+      hint: "Tap ✏️ Edit above to add where you're heading",
       done: hasDestination,
-      href: `#`, // edit button on trip page
+      href: ``,
     },
     {
       key: "dates",
       label: "Add travel dates",
-      hint: "Set your start and end date",
+      hint: "Tap ✏️ Edit above to set start and end dates",
       done: hasDates,
-      href: `#`,
+      href: ``,
     },
     {
       key: "events",
@@ -151,7 +151,7 @@ export function TripSetupCard({ tripId, tripStatus, hasDestination, hasDates }: 
                   <p className="text-xs text-zinc-400 dark:text-zinc-600">{item.hint}</p>
                 )}
               </div>
-              {!item.done && item.href !== "#" && (
+              {!item.done && item.href && (
                 <Link
                   href={item.href}
                   className="shrink-0 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors"
