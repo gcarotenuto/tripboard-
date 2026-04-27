@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TripStats } from "@/components/trips/TripStats";
+import { TripSetupCard } from "@/components/trips/TripSetupCard";
 import { TodayAgenda } from "@/components/trips/TodayAgenda";
 import { QuickActions } from "@/components/trips/QuickActions";
 import { WeatherWidget } from "@/components/weather/WeatherWidget";
@@ -180,6 +181,14 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
       </div>
 
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-8">
+        {/* Setup checklist — shown for PLANNING/UPCOMING trips */}
+        <TripSetupCard
+          tripId={params.id}
+          tripStatus={trip.status}
+          hasDestination={!!trip.primaryDestination}
+          hasDates={!!(trip.startsAt && trip.endsAt)}
+        />
+
         {/* Stats */}
         <TripStats tripId={params.id} />
 

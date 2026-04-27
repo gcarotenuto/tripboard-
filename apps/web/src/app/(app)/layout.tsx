@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { MobileNav } from "@/components/nav/MobileNav";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 export default async function AppLayout({
   children,
@@ -24,6 +25,9 @@ export default async function AppLayout({
 
       {/* Mobile bottom nav */}
       <MobileNav />
+
+      {/* Floating action button — context-aware quick add on trip sub-pages */}
+      <FloatingActionButton />
     </div>
   );
 }

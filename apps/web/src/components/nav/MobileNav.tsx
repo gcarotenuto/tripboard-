@@ -43,17 +43,33 @@ export function MobileNav() {
 
   // Inside a trip: show trip section nav
   if (activeTripId) {
+    const isOverview = pathname === `/trips/${activeTripId}`;
     return (
       <>
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 md:hidden safe-bottom">
           <div className="flex h-16 items-center overflow-x-auto scrollbar-none">
-            {/* Back to trips */}
+            {/* Back to all trips */}
             <Link
               href="/trips"
-              className="flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-500 shrink-0"
+              className="flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium text-zinc-400 dark:text-zinc-600 shrink-0"
             >
-              <span className="text-xl">🗺️</span>
-              <span>Trips</span>
+              <span className="text-xl">←</span>
+              <span>Hub</span>
+            </Link>
+
+            {/* Divider */}
+            <div className="h-8 w-px bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+
+            {/* Trip overview */}
+            <Link
+              href={`/trips/${activeTripId}`}
+              className={cn(
+                "flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium transition-colors shrink-0",
+                isOverview ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-500 dark:text-zinc-500"
+              )}
+            >
+              <span className="text-xl">✈️</span>
+              <span>Overview</span>
             </Link>
 
             {/* Divider */}
