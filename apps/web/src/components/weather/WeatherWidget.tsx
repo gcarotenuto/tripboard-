@@ -84,11 +84,16 @@ export function WeatherWidget({ tripId }: { tripId: string }) {
 
         {/* No destination */}
         {!isLoading && !error && data === null && (
-          <div className="text-center py-4 space-y-1">
-            <p className="text-2xl">📍</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-              Add a destination to your trip to see the forecast
-            </p>
+          <div className="text-center py-5 space-y-2">
+            <p className="text-3xl">🌍</p>
+            <div>
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                No destination set
+              </p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5 leading-relaxed">
+                Add a primary destination to your trip — the 7-day forecast will appear here automatically.
+              </p>
+            </div>
           </div>
         )}
 

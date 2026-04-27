@@ -5,8 +5,10 @@ import { mutate } from "swr";
 import { Modal } from "@tripboard/ui";
 import { MOOD_OPTIONS } from "@tripboard/shared";
 import { Sparkles, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 export function NewEntryButton({ tripId }: { tripId: string }) {
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -28,34 +30,43 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
       });
       const json = await res.json() as { content?: string };
       if (json.content) setContent(json.content);
+      else toast("Couldn't generate AI entry — try again", "error");
     } catch {
-      // silently fail
+      toast("Couldn't generate AI entry — try again", "error");
     } finally {
       setAiLoading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!content.trim()) return;
+    if (!content.trim()) {
+      toast("Write something before saving", "error");
+      return;
+    }
     setSaving(true);
-
-    await fetch(`/api/trips/${tripId}/journal`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: title.trim() || undefined,
-        content,
-        mood,
-        entryDate: new Date().toISOString().split("T")[0],
-      }),
-    });
-
-    await mutate(`/api/trips/${tripId}/journal`);
-    setTitle("");
-    setContent("");
-    setMood("");
-    setSaving(false);
-    setIsOpen(false);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/journal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim() || undefined,
+          content,
+          mood,
+          entryDate: new Date().toISOString().split("T")[0],
+        }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      await mutate(`/api/trips/${tripId}/journal`);
+      toast("Journal entry saved 📓");
+      setTitle("");
+      setContent("");
+      setMood("");
+      setIsOpen(false);
+    } catch {
+      toast("Failed to save entry — try again", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -129,6 +140,11 @@ export function NewEntryButton({ tripId }: { tripId: string }) {
               placeholder={aiLoading ? "AI is writing your entry…" : "Write your travel story, or let AI draft it for you…"}
               className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
             />
+            {content.trim() && (
+              <p className="mt-1 text-right text-[11px] text-zinc-400 dark:text-zinc-500">
+                {content.trim().split(/\s+/).filter(Boolean).length} words
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2">
