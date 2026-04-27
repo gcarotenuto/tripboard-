@@ -62,6 +62,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
   const [form, setForm] = useState<EditForm>({ title: "", amount: "", currency: "EUR", category: "OTHER", date: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingPaidId, setTogglingPaidId] = useState<string | null>(null);
 
   // Filter + sort state
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
@@ -127,6 +128,22 @@ export function ExpenseList({ tripId }: { tripId: string }) {
       toast("Failed to save expense", "error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function togglePaid(expense: Expense) {
+    setTogglingPaidId(expense.id);
+    try {
+      await fetch(`/api/trips/${tripId}/expenses/${expense.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPaid: !expense.isPaid }),
+      });
+      mutate();
+    } catch {
+      toast("Failed to update", "error");
+    } finally {
+      setTogglingPaidId(null);
     }
   }
 
@@ -263,6 +280,19 @@ export function ExpenseList({ tripId }: { tripId: string }) {
             <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 shrink-0">
               {formatCurrency(expense.amount, expense.currency)}
             </span>
+            {/* Paid toggle — always visible */}
+            <button
+              onClick={() => togglePaid(expense)}
+              disabled={togglingPaidId === expense.id}
+              title={expense.isPaid ? "Mark as unpaid" : "Mark as paid"}
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-all ${
+                expense.isPaid
+                  ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900/60"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 dark:hover:bg-amber-950/30 dark:hover:text-amber-400 dark:hover:border-amber-800"
+              } ${togglingPaidId === expense.id ? "opacity-50" : ""}`}
+            >
+              {expense.isPaid ? "✓ Paid" : "Unpaid"}
+            </button>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               {deletingId === expense.id ? (
                 /* Inline confirmation */
