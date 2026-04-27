@@ -16,7 +16,20 @@ import { AiItineraryButton } from "@/components/trips/AiItineraryButton";
 import { AiPackingButton } from "@/components/packing/AiPackingButton";
 import { CalendarDays, Lock, BookOpen, CreditCard, Luggage, MapPin, ArrowLeft, Printer, Calendar } from "lucide-react";
 
-export const metadata: Metadata = { title: "Trip Overview" };
+interface TripPageProps { params: { id: string } }
+
+export async function generateMetadata({ params }: TripPageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Trip" };
+  const userId = (session.user as { id: string }).id;
+  const trip = await prisma.trip.findFirst({
+    where: { id: params.id, userId, deletedAt: null },
+    select: { title: true, primaryDestination: true },
+  });
+  if (!trip) return { title: "Trip" };
+  const dest = trip.primaryDestination ? ` · ${trip.primaryDestination}` : "";
+  return { title: `${trip.title}${dest}` };
+}
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   PLANNING: { label: "Planning", className: "bg-zinc-100 text-zinc-600 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700" },
@@ -46,8 +59,6 @@ const NAV_ITEMS = [
   { href: "packing", label: "Packing", Icon: Luggage, description: "Packing checklist" },
   { href: "map", label: "Map", Icon: MapPin, description: "Locations & pins" },
 ];
-
-interface TripPageProps { params: { id: string } }
 
 export default async function TripOverviewPage({ params }: TripPageProps) {
   const session = await getServerSession(authOptions);
