@@ -15,23 +15,25 @@ interface EditForm {
   mood: string;
 }
 
-// Semantic mood values — must stay in sync with QuickJournalModal
+// Mood options — emoji is the stored value (from @tripboard/shared)
 const MOOD_OPTIONS = [
-  { value: "AMAZING", emoji: "🤩", label: "Amazing" },
-  { value: "HAPPY",   emoji: "😊", label: "Happy" },
-  { value: "OKAY",    emoji: "😐", label: "Okay" },
-  { value: "TIRED",   emoji: "😴", label: "Tired" },
-  { value: "STRESSED",emoji: "😤", label: "Stressed" },
+  { value: "🤩", label: "Excited" },
+  { value: "😄", label: "Happy" },
+  { value: "😊", label: "Content" },
+  { value: "😐", label: "Neutral" },
+  { value: "😴", label: "Tired" },
+  { value: "😤", label: "Frustrated" },
 ];
 
-const MOOD_EMOJI: Record<string, string> = Object.fromEntries(
-  MOOD_OPTIONS.map((m) => [m.value, m.emoji])
-);
+// Legacy semantic values written by an earlier version — map to emoji for display
+const LEGACY_MOOD_EMOJI: Record<string, string> = {
+  AMAZING: "🤩", HAPPY: "😊", OKAY: "😐", TIRED: "😴", STRESSED: "😤",
+};
 
-/** Resolve mood to display emoji — supports both semantic values and legacy raw emojis */
+/** Resolve mood to display emoji — handles legacy semantic values gracefully */
 function moodEmoji(mood: string | null | undefined): string {
   if (!mood) return "📝";
-  return MOOD_EMOJI[mood] ?? mood; // fall back to the raw value (legacy emoji)
+  return LEGACY_MOOD_EMOJI[mood] ?? mood;
 }
 
 function JournalSkeleton() {
@@ -315,7 +317,7 @@ export function JournalView({ tripId }: { tripId: string }) {
                           : "border-transparent opacity-60 hover:opacity-100 hover:border-zinc-200 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                       }`}
                     >
-                      {m.emoji}
+                      {m.value}
                     </button>
                   ))}
                   {form.mood && (

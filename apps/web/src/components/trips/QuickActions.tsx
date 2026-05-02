@@ -153,12 +153,14 @@ function QuickExpenseModal({ tripId, onClose }: QuickModalBaseProps) {
 
 // ── Quick Journal Modal ────────────────────────────────────────────────────────
 
+// Keep in sync with MOOD_OPTIONS in @tripboard/shared — store emoji as value
 const MOODS = [
-  { value: "AMAZING", label: "🤩", title: "Amazing" },
-  { value: "HAPPY", label: "😊", title: "Happy" },
-  { value: "OKAY", label: "😐", title: "Okay" },
-  { value: "TIRED", label: "😴", title: "Tired" },
-  { value: "STRESSED", label: "😤", title: "Stressed" },
+  { value: "🤩", title: "Excited" },
+  { value: "😄", title: "Happy" },
+  { value: "😊", title: "Content" },
+  { value: "😐", title: "Neutral" },
+  { value: "😴", title: "Tired" },
+  { value: "😤", title: "Frustrated" },
 ];
 
 function QuickJournalModal({ tripId, onClose }: QuickModalBaseProps) {
@@ -244,7 +246,7 @@ function QuickJournalModal({ tripId, onClose }: QuickModalBaseProps) {
                     : "opacity-50 hover:opacity-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 }`}
               >
-                {m.label}
+                {m.value}
               </button>
             ))}
           </div>
