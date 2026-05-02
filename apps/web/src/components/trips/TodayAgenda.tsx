@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import useSWR from "swr";
-import { ArrowRight, CalendarCheck } from "lucide-react";
+import { ArrowRight, CalendarCheck, CalendarClock } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -54,18 +54,112 @@ function isPast(dateStr: string | null): boolean {
   return new Date(dateStr) < new Date();
 }
 
+function daysUntil(dateStr: string): number {
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((d.getTime() - today.getTime()) / 86400000);
+}
+
 interface TodayAgendaProps {
   tripId: string;
   tripStatus: string;
 }
 
-export function TodayAgenda({ tripId, tripStatus }: TodayAgendaProps) {
+// ── Upcoming trip events preview ───────────────────────────────────────────────
+
+function UpcomingEventsPreview({ tripId }: { tripId: string }) {
   const { data: events } = useSWR<TripEvent[]>(
-    tripStatus === "ACTIVE" ? `/api/trips/${tripId}/events` : null,
+    `/api/trips/${tripId}/events`,
     fetcher
   );
 
-  if (tripStatus !== "ACTIVE") return null;
+  if (!events || events.length === 0) return null;
+
+  // Sort and take first 3 future events
+  const upcoming = events
+    .filter((e) => e.startsAt && new Date(e.startsAt) > new Date())
+    .sort((a, b) => new Date(a.startsAt!).getTime() - new Date(b.startsAt!).getTime())
+    .slice(0, 3);
+
+  if (upcoming.length === 0) return null;
+
+  const firstEvent = upcoming[0];
+  const daysAway = firstEvent.startsAt ? daysUntil(firstEvent.startsAt) : null;
+
+  return (
+    <div className="rounded-2xl border border-amber-200/70 dark:border-amber-900/60 bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/10 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-amber-100 dark:border-amber-900/40">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            Upcoming events
+          </span>
+          {daysAway !== null && daysAway <= 7 && (
+            <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+              {daysAway === 0 ? "Today!" : daysAway === 1 ? "Tomorrow" : `${daysAway}d`}
+            </span>
+          )}
+        </div>
+        <Link
+          href={`/trips/${tripId}/timeline`}
+          className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 transition-colors"
+        >
+          View all
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+
+      {/* Event list */}
+      <div className="px-5 py-4 space-y-2.5">
+        {upcoming.map((event) => {
+          const days = event.startsAt ? daysUntil(event.startsAt) : null;
+          const emoji = event.emoji ?? EVENT_TYPE_EMOJIS[event.type] ?? "📌";
+          const time = formatEventTime(event.startsAt);
+
+          return (
+            <div
+              key={event.id}
+              className="flex items-center gap-3 rounded-xl bg-white/60 dark:bg-zinc-900/40 px-3 py-2"
+            >
+              <span className="text-base shrink-0">{emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{event.title}</p>
+                {event.locationName && (
+                  <p className="text-xs text-zinc-400 dark:text-zinc-600 truncate">{event.locationName}</p>
+                )}
+              </div>
+              <div className="shrink-0 text-right">
+                {days !== null && days > 0 && (
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    in {days}d
+                  </p>
+                )}
+                {days === 0 && time && (
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">{time}</p>
+                )}
+                {days === 0 && !time && (
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Today</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Active trip today agenda ───────────────────────────────────────────────────
+
+function ActiveTodayAgenda({ tripId }: { tripId: string }) {
+  const { data: events } = useSWR<TripEvent[]>(
+    `/api/trips/${tripId}/events`,
+    fetcher
+  );
+
   if (!events) return null;
 
   const todayEvents = events
@@ -76,11 +170,18 @@ export function TodayAgenda({ tripId, tripStatus }: TodayAgendaProps) {
       return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
     });
 
+  // Find next upcoming event (today or future)
   const now = new Date();
   const todayLabel = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-
-  // Find the next upcoming event
   const nextEvent = todayEvents.find((e) => e.startsAt && !isPast(e.startsAt));
+
+  // If no events today, find next future event
+  const nextFutureEvent =
+    todayEvents.length === 0
+      ? events
+          .filter((e) => e.startsAt && !isPast(e.startsAt) && !isToday(e.startsAt))
+          .sort((a, b) => new Date(a.startsAt!).getTime() - new Date(b.startsAt!).getTime())[0] ?? null
+      : null;
 
   return (
     <div className="rounded-2xl border border-emerald-200/60 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 dark:from-emerald-950/20 dark:to-teal-950/20 overflow-hidden">
@@ -110,9 +211,34 @@ export function TodayAgenda({ tripId, tripStatus }: TodayAgendaProps) {
       {/* Event list */}
       <div className="px-5 py-4">
         {todayEvents.length === 0 ? (
-          <div className="flex items-center gap-3 text-sm text-emerald-700/60 dark:text-emerald-500">
-            <CalendarCheck className="h-4 w-4 shrink-0" />
-            <span>No events scheduled for today — free day!</span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-sm text-emerald-700/60 dark:text-emerald-500">
+              <CalendarCheck className="h-4 w-4 shrink-0" />
+              <span>No events today — free day!</span>
+            </div>
+            {/* Show next upcoming event as a teaser */}
+            {nextFutureEvent && (
+              <div className="flex items-center gap-3 rounded-xl bg-white/40 dark:bg-zinc-900/30 px-3 py-2">
+                <span className="text-base shrink-0">
+                  {nextFutureEvent.emoji ?? EVENT_TYPE_EMOJIS[nextFutureEvent.type] ?? "📌"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 truncate">
+                    Next: {nextFutureEvent.title}
+                  </p>
+                  {nextFutureEvent.startsAt && (
+                    <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
+                      {new Date(nextFutureEvent.startsAt).toLocaleDateString("en-US", {
+                        weekday: "short", month: "short", day: "numeric",
+                      })}
+                    </p>
+                  )}
+                </div>
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                  in {nextFutureEvent.startsAt ? daysUntil(nextFutureEvent.startsAt) : "?"}d
+                </span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -183,4 +309,12 @@ export function TodayAgenda({ tripId, tripStatus }: TodayAgendaProps) {
       </div>
     </div>
   );
+}
+
+// ── Public export ──────────────────────────────────────────────────────────────
+
+export function TodayAgenda({ tripId, tripStatus }: TodayAgendaProps) {
+  if (tripStatus === "ACTIVE") return <ActiveTodayAgenda tripId={tripId} />;
+  if (tripStatus === "UPCOMING") return <UpcomingEventsPreview tripId={tripId} />;
+  return null;
 }
