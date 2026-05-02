@@ -6,8 +6,16 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TripSummary } from "@tripboard/shared";
 import { formatDate, getTripDurationDays } from "@tripboard/shared";
-import { MapPin, Calendar, Wand2 } from "lucide-react";
+import { MapPin, Calendar, Wand2, ArrowUpDown } from "lucide-react";
 import { CoverUpload } from "@/components/trips/CoverUpload";
+
+type SortOption = "date-desc" | "date-asc" | "name-asc";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  "date-desc": "Newest first",
+  "date-asc":  "Oldest first",
+  "name-asc":  "A → Z",
+};
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -69,6 +77,8 @@ function getStatusConfig(status: string) {
 export function TripGrid() {
   const [filter, setFilter] = useState<StatusFilter>("All");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortOption>("date-desc");
+  const [sortOpen, setSortOpen] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const { data: trips, isLoading, error, mutate } = useSWR<TripSummary[]>("/api/trips", fetcher);
   const router = useRouter();
@@ -94,39 +104,85 @@ export function TripGrid() {
 
   const filtered = !trips
     ? []
-    : trips.filter((t) => {
-        if (filter !== "All" && t.status !== filter.toUpperCase()) return false;
-        if (tagFilter && !(t.tags ?? []).includes(tagFilter)) return false;
-        return true;
-      });
+    : trips
+        .filter((t) => {
+          if (filter !== "All" && t.status !== filter.toUpperCase()) return false;
+          if (tagFilter && !(t.tags ?? []).includes(tagFilter)) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          if (sort === "name-asc") return a.title.localeCompare(b.title);
+          if (sort === "date-asc") {
+            const ta = a.startsAt ? new Date(a.startsAt).getTime() : 0;
+            const tb = b.startsAt ? new Date(b.startsAt).getTime() : 0;
+            return ta - tb;
+          }
+          // date-desc (default)
+          const ta = a.startsAt ? new Date(a.startsAt).getTime() : 0;
+          const tb = b.startsAt ? new Date(b.startsAt).getTime() : 0;
+          return tb - ta;
+        });
 
   return (
     <>
-      {/* Status filter tabs */}
-      <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
-        {STATUS_FILTERS.map((tab) => {
-          const count = tab !== "All" && trips
-            ? trips.filter((t) => t.status === tab.toUpperCase()).length
-            : null;
-          return (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-                filter === tab
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              }`}
-            >
-              {tab}
-              {count !== null && count > 0 && (
-                <span className={`ml-1.5 text-xs ${filter === tab ? "opacity-70" : "opacity-50"}`}>
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* Status filter tabs + sort */}
+      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-1">
+        <div className="flex gap-1.5 flex-1 min-w-0 overflow-x-auto">
+          {STATUS_FILTERS.map((tab) => {
+            const count = tab !== "All" && trips
+              ? trips.filter((t) => t.status === tab.toUpperCase()).length
+              : null;
+            return (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                  filter === tab
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                }`}
+              >
+                {tab}
+                {count !== null && count > 0 && (
+                  <span className={`ml-1.5 text-xs ${filter === tab ? "opacity-70" : "opacity-50"}`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sort dropdown */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setSortOpen((v) => !v)}
+            className="flex items-center gap-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600 transition-all"
+          >
+            <ArrowUpDown className="h-3 w-3" />
+            <span className="hidden sm:inline">{SORT_LABELS[sort]}</span>
+          </button>
+          {sortOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
+              <div className="absolute right-0 mt-1.5 z-20 w-40 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+                {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => { setSort(opt); setSortOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
+                      sort === opt
+                        ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                    }`}
+                  >
+                    {SORT_LABELS[opt]}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tag filter chips — only shown if any trips have tags */}
