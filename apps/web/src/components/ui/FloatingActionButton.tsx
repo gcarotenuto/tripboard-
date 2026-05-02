@@ -3,18 +3,28 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { mutate } from "swr";
+import useSWR from "swr";
 import { Plus, X, CreditCard, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 
-const CURRENCIES = ["EUR", "USD", "GBP", "JPY", "CHF", "CAD", "AUD"] as const;
+const FAB_CURRENCIES = [
+  "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD",
+  "CNY", "HKD", "SGD", "KRW", "THB", "MYR", "INR",
+  "AED", "TRY", "ZAR", "BRL", "MXN",
+  "NOK", "SEK", "DKK", "PLN", "CZK",
+];
+
 const EXPENSE_CATEGORIES = [
   { value: "TRANSPORT",     label: "🚗 Transport" },
   { value: "ACCOMMODATION", label: "🏨 Hotel" },
   { value: "FOOD",          label: "🍽️ Food" },
-  { value: "ACTIVITY",      label: "🎯 Activity" },
+  { value: "ACTIVITIES",    label: "🎯 Activity" },
   { value: "SHOPPING",      label: "🛍️ Shopping" },
   { value: "OTHER",         label: "📦 Other" },
 ];
+
+const prefFetcher = (url: string) =>
+  fetch(url).then((r) => r.json()).then((r) => r.preferences as Record<string, string> | undefined);
 
 interface QuickForm {
   title: string;
@@ -25,7 +35,17 @@ interface QuickForm {
 
 function QuickExpenseSheet({ tripId, onClose }: { tripId: string; onClose: () => void }) {
   const { toast } = useToast();
-  const [form, setForm] = useState<QuickForm>({ title: "", amount: "", currency: "EUR", category: "FOOD" });
+  const { data: prefs } = useSWR("/api/user/profile", prefFetcher, { revalidateOnFocus: false });
+  const defaultCurrency = prefs?.defaultCurrency ?? "EUR";
+  const [form, setForm] = useState<QuickForm>({ title: "", amount: "", currency: defaultCurrency, category: "FOOD" });
+
+  // Sync currency once prefs load
+  useEffect(() => {
+    if (prefs?.defaultCurrency) {
+      setForm((f) => ({ ...f, currency: prefs.defaultCurrency! }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs?.defaultCurrency]);
   const [saving, setSaving] = useState(false);
 
   // ESC to close
@@ -117,7 +137,7 @@ function QuickExpenseSheet({ tripId, onClose }: { tripId: string; onClose: () =>
               onChange={(e) => setForm({ ...form, currency: e.target.value })}
               className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-2.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
-              {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+              {FAB_CURRENCIES.map((c) => <option key={c}>{c}</option>)}
             </select>
           </div>
 
