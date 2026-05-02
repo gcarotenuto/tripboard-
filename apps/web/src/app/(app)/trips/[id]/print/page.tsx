@@ -4,6 +4,24 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { PrintActions } from "./PrintActions";
 
+const MOOD_LABELS: Record<string, string> = {
+  AMAZING: "🤩 Amazing",
+  HAPPY: "😊 Happy",
+  OKAY: "😐 Okay",
+  TIRED: "😴 Tired",
+  STRESSED: "😤 Stressed",
+};
+
+const PACKING_CATEGORY_EMOJIS: Record<string, string> = {
+  CLOTHING: "👕",
+  TOILETRIES: "🧴",
+  ELECTRONICS: "🔌",
+  DOCUMENTS: "📄",
+  MEDICATIONS: "💊",
+  GEAR: "🎒",
+  OTHER: "📦",
+};
+
 interface PrintPageProps {
   params: { id: string };
 }
@@ -16,6 +34,22 @@ function formatDate(d: Date | string | null): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatDateTime(d: Date | string | null): string {
+  if (!d) return "TBD";
+  const dt = new Date(d);
+  const datePart = dt.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const timePart = dt.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return `${datePart} · ${timePart}`;
 }
 
 function formatCurrency(amount: number, currency: string): string {
@@ -38,7 +72,7 @@ export default async function PrintPage({ params }: PrintPageProps) {
   const trip = await prisma.trip.findFirst({ where: { id: params.id, userId } });
   if (!trip) redirect("/trips");
 
-  const [events, expenses, journal] = await Promise.all([
+  const [events, expenses, journal, packingList] = await Promise.all([
     prisma.tripEvent.findMany({
       where: { tripId: params.id },
       orderBy: { startsAt: "asc" },
@@ -50,6 +84,10 @@ export default async function PrintPage({ params }: PrintPageProps) {
     prisma.journalEntry.findMany({
       where: { tripId: params.id, deletedAt: null },
       orderBy: { entryDate: "asc" },
+    }),
+    prisma.packingList.findUnique({
+      where: { tripId: params.id },
+      include: { items: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] } },
     }),
   ]);
 
@@ -68,6 +106,15 @@ export default async function PrintPage({ params }: PrintPageProps) {
   const totalByCategory = groupByCategory(expenses);
   const grandTotal = expenses.reduce((s, e) => s + e.amount, 0);
   const primaryCurrency = expenses[0]?.currency ?? "USD";
+
+  const packingItems = packingList?.items ?? [];
+  const packedCount = packingItems.filter((i) => i.isPacked).length;
+  const packingByCategory = packingItems.reduce<Record<string, typeof packingItems>>((acc, item) => {
+    const cat = item.category || "OTHER";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(item);
+    return acc;
+  }, {});
 
   return (
     <>
@@ -117,6 +164,22 @@ export default async function PrintPage({ params }: PrintPageProps) {
               <p>{new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
             </div>
           </div>
+
+          {/* Summary stats row */}
+          <div className="mt-5 grid grid-cols-4 gap-3">
+            {[
+              { label: "Events", value: events.length, emoji: "📅" },
+              { label: "Expenses", value: expenses.length > 0 ? formatCurrency(grandTotal, primaryCurrency) : "—", emoji: "💳" },
+              { label: "Journal entries", value: journal.length, emoji: "📓" },
+              { label: "Packing", value: packingItems.length > 0 ? `${packedCount}/${packingItems.length} packed` : "—", emoji: "🧳" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+                <p className="text-lg">{s.emoji}</p>
+                <p className="text-sm font-semibold text-zinc-900">{s.value}</p>
+                <p className="text-xs text-zinc-400">{s.label}</p>
+              </div>
+            ))}
+          </div>
         </header>
 
         {/* Itinerary */}
@@ -131,14 +194,21 @@ export default async function PrintPage({ params }: PrintPageProps) {
                   key={event.id}
                   className="flex gap-4 rounded-lg border border-zinc-200 p-3"
                 >
-                  <div className="w-32 shrink-0 text-xs text-zinc-500">
-                    {event.startsAt ? formatDate(event.startsAt) : "TBD"}
+                  <div className="w-40 shrink-0">
+                    <p className="text-xs font-medium text-zinc-700">
+                      {event.startsAt ? formatDateTime(event.startsAt) : "TBD"}
+                    </p>
+                    {event.endsAt && event.endsAt !== event.startsAt && (
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        → {formatDateTime(event.endsAt)}
+                      </p>
+                    )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm text-zinc-900">{event.title}</p>
-                    <p className="text-xs text-zinc-500 capitalize">{event.type.toLowerCase()}</p>
+                    <p className="text-xs text-zinc-500 capitalize">{event.type.toLowerCase().replace(/_/g, " ")}</p>
                     {event.locationName && (
-                      <p className="text-xs text-zinc-400 mt-0.5">{event.locationName}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">📍 {event.locationName}</p>
                     )}
                     {event.notes && (
                       <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{event.notes}</p>
@@ -219,18 +289,71 @@ export default async function PrintPage({ params }: PrintPageProps) {
             <div className="space-y-6">
               {journal.map((entry) => (
                 <div key={entry.id} className="border-l-4 border-zinc-200 pl-4">
-                  <div className="mb-1 flex items-baseline gap-3">
+                  <div className="mb-1 flex items-center gap-3 flex-wrap">
                     <p className="font-semibold text-zinc-900">
                       {entry.title ?? "Untitled Entry"}
                     </p>
                     <span className="text-xs text-zinc-400">{formatDate(entry.entryDate)}</span>
+                    {entry.mood && (
+                      <span className="text-xs text-zinc-500 bg-zinc-100 rounded px-1.5 py-0.5">
+                        {MOOD_LABELS[entry.mood] ?? entry.mood}
+                      </span>
+                    )}
                   </div>
                   {entry.locationName && (
-                    <p className="text-xs text-zinc-400 mb-1">{entry.locationName}</p>
+                    <p className="text-xs text-zinc-400 mb-1">📍 {entry.locationName}</p>
                   )}
                   <p className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap">
                     {entry.content}
                   </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Packing List */}
+        {packingItems.length > 0 && (
+          <section className="mb-10 section-break">
+            <h2 className="mb-4 text-xl font-bold text-zinc-900 tracking-tight border-b border-zinc-200 pb-2">
+              Packing List
+              <span className="ml-3 text-sm font-normal text-zinc-400">
+                {packedCount}/{packingItems.length} packed
+              </span>
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {Object.entries(packingByCategory).map(([cat, items]) => (
+                <div key={cat} className="rounded-lg border border-zinc-200 overflow-hidden">
+                  <div className="bg-zinc-50 border-b border-zinc-200 px-3 py-1.5 flex items-center gap-1.5">
+                    <span className="text-sm">{PACKING_CATEGORY_EMOJIS[cat] ?? "📦"}</span>
+                    <span className="text-xs font-semibold text-zinc-600 capitalize">
+                      {cat.toLowerCase().replace(/_/g, " ")}
+                    </span>
+                    <span className="ml-auto text-xs text-zinc-400">
+                      {items.filter((i) => i.isPacked).length}/{items.length}
+                    </span>
+                  </div>
+                  <ul className="divide-y divide-zinc-100">
+                    {items.map((item) => (
+                      <li key={item.id} className="px-3 py-1.5 flex items-center gap-2">
+                        {/* Checkbox square */}
+                        <span className={`shrink-0 w-3.5 h-3.5 border rounded flex items-center justify-center text-[9px] ${
+                          item.isPacked
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-zinc-300"
+                        }`}>
+                          {item.isPacked ? "✓" : ""}
+                        </span>
+                        <span className={`text-xs flex-1 ${item.isPacked ? "line-through text-zinc-400" : "text-zinc-800"}`}>
+                          {item.name}
+                          {item.quantity > 1 && (
+                            <span className="text-zinc-400 ml-1">×{item.quantity}</span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
