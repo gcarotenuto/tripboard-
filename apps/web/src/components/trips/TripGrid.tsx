@@ -68,6 +68,7 @@ function getStatusConfig(status: string) {
 
 export function TripGrid() {
   const [filter, setFilter] = useState<StatusFilter>("All");
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [demoLoading, setDemoLoading] = useState(false);
   const { data: trips, isLoading, error, mutate } = useSWR<TripSummary[]>("/api/trips", fetcher);
   const router = useRouter();
@@ -86,16 +87,23 @@ export function TripGrid() {
     }
   };
 
+  // Collect all unique tags across trips
+  const allTags = !trips ? [] : Array.from(
+    new Set(trips.flatMap((t) => t.tags ?? []))
+  ).sort();
+
   const filtered = !trips
     ? []
-    : filter === "All"
-    ? trips
-    : trips.filter((t) => t.status === filter.toUpperCase());
+    : trips.filter((t) => {
+        if (filter !== "All" && t.status !== filter.toUpperCase()) return false;
+        if (tagFilter && !(t.tags ?? []).includes(tagFilter)) return false;
+        return true;
+      });
 
   return (
     <>
-      {/* Filter tabs */}
-      <div className="mb-6 flex gap-1.5 overflow-x-auto pb-1">
+      {/* Status filter tabs */}
+      <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
         {STATUS_FILTERS.map((tab) => {
           const count = tab !== "All" && trips
             ? trips.filter((t) => t.status === tab.toUpperCase()).length
@@ -120,6 +128,34 @@ export function TripGrid() {
           );
         })}
       </div>
+
+      {/* Tag filter chips — only shown if any trips have tags */}
+      {allTags.length > 0 && (
+        <div className="mb-5 flex gap-1.5 overflow-x-auto pb-1">
+          {tagFilter && (
+            <button
+              onClick={() => setTagFilter(null)}
+              className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium bg-indigo-600 text-white flex items-center gap-1 transition-all"
+            >
+              <span className="opacity-70">×</span> Clear tag
+            </button>
+          )}
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+              className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium border transition-all ${
+                tagFilter === tag
+                  ? "bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950/50 dark:border-indigo-700 dark:text-indigo-300"
+                  : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-600"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
 
       {/* Content */}
       {isLoading ? (
