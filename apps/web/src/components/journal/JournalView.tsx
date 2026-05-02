@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
-import { Trash2, Pencil, X, AlertTriangle } from "lucide-react";
+import { Trash2, Pencil, X, AlertTriangle, Search } from "lucide-react";
 import type { JournalEntry } from "@tripboard/shared";
 import { formatDate } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
@@ -67,11 +67,33 @@ export function JournalView({ tripId }: { tripId: string }) {
   );
   const { toast } = useToast();
 
+  const [search, setSearch] = useState("");
+  const [moodFilter, setMoodFilter] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [form, setForm] = useState<EditForm>({ title: "", content: "", mood: "" });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const visibleEntries = useMemo(() => {
+    if (!entries) return [];
+    let list = entries.slice();
+    if (moodFilter) {
+      list = list.filter((e) => {
+        const resolved = LEGACY_MOOD_EMOJI[e.mood ?? ""] ?? e.mood;
+        return resolved === moodFilter;
+      });
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (e) =>
+          (e.title ?? "").toLowerCase().includes(q) ||
+          e.content.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [entries, search, moodFilter]);
 
   function openEdit(entry: JournalEntry) {
     setEditingEntry(entry);
@@ -172,8 +194,70 @@ export function JournalView({ tripId }: { tripId: string }) {
 
   return (
     <>
+      {/* Search + mood filter bar */}
+      <div className="mb-4 space-y-2">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search entries…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mr-1">Mood</span>
+          {MOOD_OPTIONS.map((m) => (
+            <button
+              key={m.value}
+              title={m.label}
+              onClick={() => setMoodFilter(moodFilter === m.value ? null : m.value)}
+              className={`text-base leading-none px-2 py-1 rounded-lg border transition-all ${
+                moodFilter === m.value
+                  ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 scale-110 ring-1 ring-indigo-300 dark:ring-indigo-700"
+                  : "border-zinc-200 dark:border-zinc-700 opacity-60 hover:opacity-100 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              }`}
+            >
+              {m.value}
+            </button>
+          ))}
+          {(moodFilter || search) && (
+            <button
+              onClick={() => { setMoodFilter(null); setSearch(""); }}
+              className="ml-1 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors underline underline-offset-2"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* No results state */}
+      {visibleEntries.length === 0 && (
+        <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-10 text-center">
+          <div className="text-4xl mb-3">🔍</div>
+          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">No entries found</p>
+          <p className="text-xs text-zinc-400 mt-1">Try adjusting your search or mood filter.</p>
+          <button
+            onClick={() => { setMoodFilter(null); setSearch(""); }}
+            className="mt-4 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {entries.map((entry) => (
+        {visibleEntries.map((entry) => (
           <article
             key={entry.id}
             className="group rounded-2xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 p-5 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors"
