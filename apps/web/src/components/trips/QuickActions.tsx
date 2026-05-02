@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { mutate } from "swr";
+import useSWR from "swr";
 import { PlusCircle, Loader2, BookOpen } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+
+const prefFetcher = (url: string) =>
+  fetch(url).then((r) => r.json()).then((r) => r.preferences as Record<string, string> | undefined);
 
 // ── Quick Expense Modal ────────────────────────────────────────────────────────
 
@@ -15,7 +19,17 @@ interface QuickModalBaseProps {
 
 function QuickExpenseModal({ tripId, onClose }: QuickModalBaseProps) {
   const { toast } = useToast();
-  const [form, setForm] = useState({ title: "", amount: "", currency: "EUR", category: "OTHER" });
+  const { data: prefs } = useSWR("/api/user/profile", prefFetcher, { revalidateOnFocus: false });
+  const defaultCurrency = prefs?.defaultCurrency ?? "EUR";
+  const [form, setForm] = useState({ title: "", amount: "", currency: defaultCurrency, category: "OTHER" });
+
+  // Sync currency once prefs load (only if user hasn't changed it yet)
+  useEffect(() => {
+    if (prefs?.defaultCurrency) {
+      setForm((f) => ({ ...f, currency: prefs.defaultCurrency! }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs?.defaultCurrency]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -97,7 +111,12 @@ function QuickExpenseModal({ tripId, onClose }: QuickModalBaseProps) {
               onChange={(e) => setForm({ ...form, currency: e.target.value })}
               className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
-              {["EUR", "USD", "GBP", "JPY", "CHF", "CAD", "AUD"].map((c) => (
+              {[
+                "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD",
+                "CNY", "HKD", "SGD", "KRW", "THB", "MYR", "INR",
+                "AED", "TRY", "ZAR", "BRL", "MXN",
+                "NOK", "SEK", "DKK", "PLN", "CZK",
+              ].map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>

@@ -13,7 +13,24 @@ const LABEL = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5
 const INPUT = "w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400";
 const INPUT_DISABLED = "w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 px-3 py-2.5 text-sm text-zinc-500 dark:text-zinc-400 cursor-not-allowed";
 
-const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF"];
+const CURRENCIES = [
+  // Major
+  "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD",
+  // Asia-Pacific
+  "CNY", "HKD", "SGD", "KRW", "THB", "MYR", "IDR", "PHP", "INR", "PKR", "BDT", "VND",
+  // Middle East & Africa
+  "AED", "SAR", "ILS", "TRY", "ZAR", "EGP", "NGN", "KES",
+  // Americas
+  "BRL", "MXN", "ARS", "CLP", "COP", "PEN",
+  // Europe (non-EUR)
+  "NOK", "SEK", "DKK", "PLN", "CZK", "HUF", "RON", "HRK", "BGN",
+];
+
+const DATE_FORMATS = [
+  { value: "MDY", label: "MM/DD/YYYY (US)" },
+  { value: "DMY", label: "DD/MM/YYYY (EU)" },
+  { value: "YMD", label: "YYYY-MM-DD (ISO)" },
+];
 
 export function SettingsClient({ user }: SettingsClientProps) {
   const { toast } = useToast();
@@ -24,6 +41,10 @@ export function SettingsClient({ user }: SettingsClientProps) {
   const defaultCurrencyInit = (user.preferences?.defaultCurrency as string) ?? "USD";
   const [defaultCurrency, setDefaultCurrency] = useState(defaultCurrencyInit);
   const [currencySaved, setCurrencySaved] = useState(false);
+
+  const dateFormatInit = (user.preferences?.dateFormat as string) ?? "MDY";
+  const [dateFormat, setDateFormat] = useState(dateFormatInit);
+  const [dateFormatSaved, setDateFormatSaved] = useState(false);
 
   async function saveName() {
     if (!name.trim()) return;
@@ -55,6 +76,22 @@ export function SettingsClient({ user }: SettingsClientProps) {
       if (!res.ok) throw new Error("save failed");
       setCurrencySaved(true);
       setTimeout(() => setCurrencySaved(false), 2000);
+    } catch {
+      toast("Failed to save preference — please try again", "error");
+    }
+  }
+
+  async function saveDateFormat(value: string) {
+    setDateFormat(value);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: { dateFormat: value } }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setDateFormatSaved(true);
+      setTimeout(() => setDateFormatSaved(false), 2000);
     } catch {
       toast("Failed to save preference — please try again", "error");
     }
@@ -107,13 +144,31 @@ export function SettingsClient({ user }: SettingsClientProps) {
               <select
                 value={defaultCurrency}
                 onChange={(e) => saveCurrency(e.target.value)}
-                className={`${INPUT} max-w-[160px]`}
+                className={`${INPUT} max-w-[200px]`}
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
               {currencySaved && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Saved!</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className={LABEL}>Date format</label>
+            <div className="flex items-center gap-3">
+              <select
+                value={dateFormat}
+                onChange={(e) => saveDateFormat(e.target.value)}
+                className={`${INPUT} max-w-[200px]`}
+              >
+                {DATE_FORMATS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              {dateFormatSaved && (
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Saved!</span>
               )}
             </div>
