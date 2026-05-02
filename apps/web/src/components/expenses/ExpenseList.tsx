@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
-import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
+import { Trash2, Pencil, X, Search, AlertTriangle, Download } from "lucide-react";
 import type { Expense, ExpenseCategory } from "@tripboard/shared";
-import { EXPENSE_CATEGORY_EMOJIS, EXPENSE_CATEGORY_LABELS, formatCurrency, formatDate } from "@tripboard/shared";
+import { EXPENSE_CATEGORY_EMOJIS, EXPENSE_CATEGORY_LABELS, ALL_CURRENCIES, formatCurrency, formatDate } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
@@ -19,8 +19,7 @@ function getDateGroupLabel(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-const CURRENCIES = ["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "CAD", "MXN"] as const;
-const CATEGORIES = ["TRANSPORT", "ACCOMMODATION", "FOOD", "ACTIVITY", "SHOPPING", "HEALTH", "OTHER"] as const;
+const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[];
 
 type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
@@ -220,6 +219,28 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     return groups;
   }, [filteredExpenses, sort]);
 
+  function exportToCsv() {
+    if (!filteredExpenses.length) return;
+    const headers = ["Title", "Amount", "Currency", "Category", "Date", "Notes", "Paid"];
+    const rows = filteredExpenses.map((e) => [
+      `"${e.title.replace(/"/g, '""')}"`,
+      e.amount,
+      e.currency,
+      EXPENSE_CATEGORY_LABELS[e.category] ?? e.category,
+      e.date ? String(e.date).split("T")[0] : "",
+      `"${(e.notes ?? "").replace(/"/g, '""')}"`,
+      e.isPaid ? "Yes" : "No",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `expenses-${tripId.slice(0, 8)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (isLoading) return <ExpenseSkeleton />;
 
   if (!expenses?.length) {
@@ -298,6 +319,17 @@ export function ExpenseList({ tripId }: { tripId: string }) {
           <option value="amount-desc">Amount (high→low)</option>
           <option value="amount-asc">Amount (low→high)</option>
         </select>
+
+        {/* CSV export */}
+        <button
+          onClick={exportToCsv}
+          disabled={filteredExpenses.length === 0}
+          title="Export to CSV"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors disabled:opacity-40"
+        >
+          <Download size={12} />
+          CSV
+        </button>
       </div>
 
       {filteredExpenses.length === 0 && (
@@ -456,7 +488,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
                   >
-                    {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {ALL_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
@@ -468,7 +500,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                 >
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{EXPENSE_CATEGORY_LABELS[c as ExpenseCategory] ?? c}</option>)}
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{EXPENSE_CATEGORY_LABELS[c]}</option>)}
                 </select>
               </div>
 
