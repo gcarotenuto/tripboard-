@@ -12,10 +12,24 @@ export type ExpenseCategory =
   | "OTHER";
 
 export type ExpenseCurrency =
-  | "USD" | "EUR" | "GBP" | "JPY" | "CAD" | "AUD"
-  | "CHF" | "CNY" | "INR" | "BRL" | "MXN" | "SGD"
-  | "HKD" | "NOK" | "SEK" | "DKK" | "PLN" | "CZK"
-  | "HUF" | "RON";
+  // Major
+  | "USD" | "EUR" | "GBP" | "JPY" | "CHF" | "CAD" | "AUD" | "NZD"
+  // Asia-Pacific
+  | "CNY" | "HKD" | "SGD" | "KRW" | "THB" | "MYR" | "IDR" | "PHP" | "INR" | "VND"
+  // Middle East & Africa
+  | "AED" | "SAR" | "ILS" | "TRY" | "ZAR" | "EGP" | "NGN" | "KES"
+  // Americas
+  | "BRL" | "MXN" | "ARS" | "CLP" | "COP" | "PEN"
+  // Europe (non-EUR)
+  | "NOK" | "SEK" | "DKK" | "PLN" | "CZK" | "HUF" | "RON" | "HRK" | "BGN";
+
+export const ALL_CURRENCIES: ExpenseCurrency[] = [
+  "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD",
+  "CNY", "HKD", "SGD", "KRW", "THB", "MYR", "IDR", "PHP", "INR", "VND",
+  "AED", "SAR", "ILS", "TRY", "ZAR", "EGP", "NGN", "KES",
+  "BRL", "MXN", "ARS", "CLP", "COP", "PEN",
+  "NOK", "SEK", "DKK", "PLN", "CZK", "HUF", "RON", "HRK", "BGN",
+];
 
 export interface Expense {
   id: string;

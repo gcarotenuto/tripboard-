@@ -2,25 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { mutate } from "swr";
+import useSWR from "swr";
 import type { ExpenseCategory, ExpenseCurrency } from "@tripboard/shared";
-import { EXPENSE_CATEGORY_LABELS, EXPENSE_CATEGORY_EMOJIS } from "@tripboard/shared";
+import { EXPENSE_CATEGORY_LABELS, EXPENSE_CATEGORY_EMOJIS, ALL_CURRENCIES } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
 
-const CURRENCIES: ExpenseCurrency[] = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "SGD"];
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[];
+const prefFetcher = (url: string) =>
+  fetch(url).then((r) => r.json()).then((r) => r.preferences as Record<string, string> | undefined);
 
 export function NewExpenseButton({ tripId }: { tripId: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { data: prefs } = useSWR("/api/user/profile", prefFetcher, { revalidateOnFocus: false });
+  const defaultCurrency = (prefs?.defaultCurrency as ExpenseCurrency | undefined) ?? "USD";
+
   const [form, setForm] = useState({
     title: "",
     amount: "",
-    currency: "USD" as ExpenseCurrency,
+    currency: defaultCurrency,
     category: "OTHER" as ExpenseCategory,
     date: new Date().toISOString().split("T")[0],
     notes: "",
   });
+
+  // Sync default currency once prefs load
+  useEffect(() => {
+    if (prefs?.defaultCurrency) {
+      setForm((f) => ({ ...f, currency: prefs.defaultCurrency as ExpenseCurrency }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs?.defaultCurrency]);
 
   // ESC to close
   useEffect(() => {
@@ -57,7 +70,7 @@ export function NewExpenseButton({ tripId }: { tripId: string }) {
       await mutate(`/api/trips/${tripId}/stats`);
 
       toast(`${EXPENSE_CATEGORY_EMOJIS[form.category]} Expense logged`);
-      setForm({ title: "", amount: "", currency: "USD", category: "OTHER", date: new Date().toISOString().split("T")[0], notes: "" });
+      setForm({ title: "", amount: "", currency: defaultCurrency, category: "OTHER", date: new Date().toISOString().split("T")[0], notes: "" });
       setOpen(false);
     } catch {
       toast("Failed to save expense — please try again", "error");
@@ -122,7 +135,7 @@ export function NewExpenseButton({ tripId }: { tripId: string }) {
                     onChange={(e) => setForm({ ...form, currency: e.target.value as ExpenseCurrency })}
                     className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
-                    {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {ALL_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
