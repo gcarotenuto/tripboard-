@@ -15,7 +15,24 @@ interface EditForm {
   mood: string;
 }
 
-const MOOD_OPTIONS = ["😊", "😄", "🥰", "😎", "🤩", "😌", "😐", "😴", "😤", "😢", "🤯", "🎉", "✈️", "🌟", "📝"];
+// Semantic mood values — must stay in sync with QuickJournalModal
+const MOOD_OPTIONS = [
+  { value: "AMAZING", emoji: "🤩", label: "Amazing" },
+  { value: "HAPPY",   emoji: "😊", label: "Happy" },
+  { value: "OKAY",    emoji: "😐", label: "Okay" },
+  { value: "TIRED",   emoji: "😴", label: "Tired" },
+  { value: "STRESSED",emoji: "😤", label: "Stressed" },
+];
+
+const MOOD_EMOJI: Record<string, string> = Object.fromEntries(
+  MOOD_OPTIONS.map((m) => [m.value, m.emoji])
+);
+
+/** Resolve mood to display emoji — supports both semantic values and legacy raw emojis */
+function moodEmoji(mood: string | null | undefined): string {
+  if (!mood) return "📝";
+  return MOOD_EMOJI[mood] ?? mood; // fall back to the raw value (legacy emoji)
+}
 
 function JournalSkeleton() {
   return (
@@ -160,11 +177,17 @@ export function JournalView({ tripId }: { tripId: string }) {
             className="group rounded-2xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 p-5 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors"
           >
             <div className="flex items-start gap-2 mb-3">
-              <span className="text-xl">{entry.mood ?? "📝"}</span>
+              <span className="text-xl leading-none mt-0.5">{moodEmoji(entry.mood)}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-zinc-400">{formatDate(entry.entryDate)}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs font-medium text-zinc-400">{formatDate(entry.entryDate)}</p>
+                  <span className="text-zinc-200 dark:text-zinc-700 select-none">·</span>
+                  <p className="text-xs text-zinc-300 dark:text-zinc-600 tabular-nums">
+                    {entry.content.trim().split(/\s+/).filter(Boolean).length}w
+                  </p>
+                </div>
                 {entry.title && (
-                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{entry.title}</h3>
+                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5">{entry.title}</h3>
                 )}
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -279,21 +302,31 @@ export function JournalView({ tripId }: { tripId: string }) {
 
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-2">Mood</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {MOOD_OPTIONS.map((emoji) => (
+                <div className="flex items-center gap-2">
+                  {MOOD_OPTIONS.map((m) => (
                     <button
-                      key={emoji}
+                      key={m.value}
                       type="button"
-                      onClick={() => setForm({ ...form, mood: form.mood === emoji ? "" : emoji })}
-                      className={`text-xl leading-none p-1.5 rounded-lg border transition-all ${
-                        form.mood === emoji
-                          ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 scale-110"
-                          : "border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                      title={m.label}
+                      onClick={() => setForm({ ...form, mood: form.mood === m.value ? "" : m.value })}
+                      className={`text-xl leading-none px-2 py-1.5 rounded-xl border transition-all ${
+                        form.mood === m.value
+                          ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 scale-110 ring-1 ring-indigo-300 dark:ring-indigo-700"
+                          : "border-transparent opacity-60 hover:opacity-100 hover:border-zinc-200 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                       }`}
                     >
-                      {emoji}
+                      {m.emoji}
                     </button>
                   ))}
+                  {form.mood && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, mood: "" })}
+                      className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-1 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
