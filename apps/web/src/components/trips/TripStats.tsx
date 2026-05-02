@@ -97,7 +97,7 @@ function StatCard({
   );
 }
 
-export function TripStats({ tripId }: { tripId: string }) {
+export function TripStats({ tripId, status }: { tripId: string; status?: string }) {
   const { data } = useSWR<TripStatsData>(`/api/trips/${tripId}/stats`, fetcher);
 
   const daysUntil = data ? getDaysUntil(data.startsAt) : null;
@@ -106,6 +106,19 @@ export function TripStats({ tripId }: { tripId: string }) {
   const packingTotal = data?.packingTotal ?? 0;
   const packingPacked = data?.packingPacked ?? 0;
   const packingPct = packingTotal > 0 ? Math.round((packingPacked / packingTotal) * 100) : null;
+
+  // Average daily spend — only meaningful when trip has started and has expenses
+  const avgDailySpend = (() => {
+    if (!data?.startsAt || !data.expenseTotal) return null;
+    if (status !== "ACTIVE" && status !== "COMPLETED") return null;
+    const start = new Date(data.startsAt);
+    start.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const daysElapsed = Math.max(1, Math.floor((now.getTime() - start.getTime()) / 86400000) + 1);
+    const avg = Math.round((data.expenseTotal / daysElapsed) * 10) / 10;
+    return `~${avg} ${data.expenseCurrency}/day`;
+  })();
 
   return (
     <div className="space-y-3">
@@ -135,6 +148,7 @@ export function TripStats({ tripId }: { tripId: string }) {
         <StatCard emoji="📓" label="Journal"      value={data?.journalEntryCount ?? null} delay={120} />
         <StatCard emoji="💳" label="Total spend"
           value={data?.expenseTotal ? `${data.expenseTotal} ${data.expenseCurrency}` : null}
+          sub={avgDailySpend}
           delay={180} />
       </div>
 

@@ -214,7 +214,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
         />
 
         {/* Stats */}
-        <TripStats tripId={params.id} />
+        <TripStats tripId={params.id} status={trip.status} />
 
         {/* Today's Agenda — only visible on ACTIVE trips */}
         <TodayAgenda tripId={params.id} tripStatus={trip.status} />
