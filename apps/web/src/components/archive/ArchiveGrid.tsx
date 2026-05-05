@@ -1,9 +1,11 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import useSWR from "swr";
 import type { Trip } from "@tripboard/shared";
 import { formatDate, getTripDurationDays } from "@tripboard/shared";
 import Link from "next/link";
+import { Search, X } from "lucide-react";
 import { GenerateMemoryCapsuleButton } from "./GenerateMemoryCapsuleButton";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
@@ -57,6 +59,17 @@ export function ArchiveGrid() {
     "/api/trips?status=COMPLETED,ARCHIVED",
     fetcher
   );
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!trips) return [];
+    if (!search.trim()) return trips;
+    const q = search.trim().toLowerCase();
+    return trips.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      (t.primaryDestination ?? "").toLowerCase().includes(q)
+    );
+  }, [trips, search]);
 
   if (isLoading) return <ArchiveLoadingSkeleton />;
 
@@ -102,7 +115,37 @@ export function ArchiveGrid() {
 
   return (
     <div className="space-y-5">
-      {trips.map((trip) => (
+      {/* Search — shown when there are multiple trips */}
+      {trips.length > 2 && (
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search your memories…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-8 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-shadow"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* No search results */}
+      {search && filtered.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 py-10 text-center">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">No memories match &ldquo;{search}&rdquo;</p>
+          <button onClick={() => setSearch("")} className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Clear search</button>
+        </div>
+      )}
+
+      {filtered.map((trip) => (
         <MemoryCapsuleCard key={trip.id} trip={trip} />
       ))}
     </div>
