@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
-import { Trash2, Pencil, X, AlertTriangle, Search } from "lucide-react";
+import { Trash2, Pencil, X, AlertTriangle, Search, ArrowUpDown } from "lucide-react";
 import type { JournalEntry } from "@tripboard/shared";
 import { formatDate } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
@@ -69,6 +69,7 @@ export function JournalView({ tripId }: { tripId: string }) {
 
   const [search, setSearch] = useState("");
   const [moodFilter, setMoodFilter] = useState<string | null>(null);
+  const [sortNewest, setSortNewest] = useState(true);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [form, setForm] = useState<EditForm>({ title: "", content: "", mood: "" });
   const [saving, setSaving] = useState(false);
@@ -92,8 +93,14 @@ export function JournalView({ tripId }: { tripId: string }) {
           e.content.toLowerCase().includes(q)
       );
     }
+    // Sort
+    list.sort((a, b) => {
+      const ta = new Date(a.entryDate).getTime();
+      const tb = new Date(b.entryDate).getTime();
+      return sortNewest ? tb - ta : ta - tb;
+    });
     return list;
-  }, [entries, search, moodFilter]);
+  }, [entries, search, moodFilter, sortNewest]);
 
   function openEdit(entry: JournalEntry) {
     setEditingEntry(entry);
@@ -196,23 +203,34 @@ export function JournalView({ tripId }: { tripId: string }) {
     <>
       {/* Search + mood filter bar */}
       <div className="mb-4 space-y-2">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search entries…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-            >
-              <X size={14} />
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search entries…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-8 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          {/* Sort toggle */}
+          <button
+            onClick={() => setSortNewest((v) => !v)}
+            title={sortNewest ? "Showing newest first" : "Showing oldest first"}
+            className="flex items-center gap-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600 transition-all shrink-0"
+          >
+            <ArrowUpDown size={12} />
+            <span className="hidden sm:inline">{sortNewest ? "Newest" : "Oldest"}</span>
+          </button>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mr-1">Mood</span>
@@ -240,6 +258,15 @@ export function JournalView({ tripId }: { tripId: string }) {
           )}
         </div>
       </div>
+
+      {/* Entry count */}
+      {entries && entries.length > 0 && (
+        <p className="text-[11px] text-zinc-400 dark:text-zinc-600 mb-3">
+          {visibleEntries.length === entries.length
+            ? `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`
+            : `${visibleEntries.length} of ${entries.length} entries`}
+        </p>
+      )}
 
       {/* No results state */}
       {visibleEntries.length === 0 && (
