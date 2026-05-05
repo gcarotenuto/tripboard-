@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { mutate } from "swr";
 import useSWR from "swr";
 import { PlusCircle, Loader2, BookOpen } from "lucide-react";
+import { ALL_CURRENCIES } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
 
 const prefFetcher = (url: string) =>
@@ -42,7 +43,7 @@ function QuickExpenseModal({ tripId, onClose }: QuickModalBaseProps) {
     { value: "TRANSPORT", label: "🚗 Transport" },
     { value: "ACCOMMODATION", label: "🏨 Hotel" },
     { value: "FOOD", label: "🍽️ Food" },
-    { value: "ACTIVITY", label: "🎯 Activity" },
+    { value: "ACTIVITIES", label: "🎯 Activity" },
     { value: "SHOPPING", label: "🛍️ Shopping" },
     { value: "OTHER", label: "📦 Other" },
   ];
@@ -111,12 +112,7 @@ function QuickExpenseModal({ tripId, onClose }: QuickModalBaseProps) {
               onChange={(e) => setForm({ ...form, currency: e.target.value })}
               className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
-              {[
-                "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD",
-                "CNY", "HKD", "SGD", "KRW", "THB", "MYR", "INR",
-                "AED", "TRY", "ZAR", "BRL", "MXN",
-                "NOK", "SEK", "DKK", "PLN", "CZK",
-              ].map((c) => (
+              {ALL_CURRENCIES.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
