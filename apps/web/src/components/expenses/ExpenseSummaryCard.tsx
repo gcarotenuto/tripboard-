@@ -39,10 +39,21 @@ function buildArcs(slices: { pct: number; color: string }[]): { dasharray: strin
   return result;
 }
 
+interface TripDateData {
+  startsAt: string | null;
+  endsAt: string | null;
+  status: string;
+}
+
 function BudgetTracker({ tripId, totalUsd }: { tripId: string; totalUsd: number }) {
   const { data: budget, mutate } = useSWR<{ budget: number | null; budgetCurrency: string }>(
     `/api/trips/${tripId}/budget`,
     fetcher
+  );
+  const { data: tripMeta } = useSWR<TripDateData>(
+    `/api/trips/${tripId}`,
+    (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data),
+    { revalidateOnFocus: false }
   );
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState("");
@@ -111,6 +122,25 @@ function BudgetTracker({ tripId, totalUsd }: { tripId: string; totalUsd: number 
   const pct = Math.min((totalUsd / budget.budget) * 100, 100);
   const over = totalUsd > budget.budget;
 
+  // Spending projection — only for ACTIVE trips with both dates and some spend
+  const projection = (() => {
+    if (!tripMeta?.startsAt || !tripMeta?.endsAt) return null;
+    if (tripMeta.status !== "ACTIVE") return null;
+    if (totalUsd <= 0) return null;
+    const start = new Date(tripMeta.startsAt);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(tripMeta.endsAt);
+    end.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const totalDays = Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86400000) + 1);
+    const elapsed = Math.max(1, Math.floor((today.getTime() - start.getTime()) / 86400000) + 1);
+    const dailyRate = totalUsd / elapsed;
+    const projected = Math.round(dailyRate * totalDays);
+    const daysLeft = Math.max(0, Math.floor((end.getTime() - today.getTime()) / 86400000));
+    return { dailyRate: Math.round(dailyRate * 10) / 10, projected, daysLeft, totalDays, elapsed };
+  })();
+
   return (
     <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
       <div className="flex items-center justify-between mb-1.5">
@@ -138,6 +168,25 @@ function BudgetTracker({ tripId, totalUsd }: { tripId: string; totalUsd: number 
           : `${formatCurrency(budget.budget - totalUsd, "USD")} remaining (${Math.round(100 - pct)}%)`
         }
       </p>
+      {/* Spending pace projection */}
+      {projection && (
+        <div className={`mt-2 rounded-lg px-2.5 py-1.5 text-[10px] flex items-center gap-1.5 ${
+          projection.projected > budget.budget
+            ? "bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400"
+            : "bg-zinc-50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400"
+        }`}>
+          <span>📈</span>
+          <span>
+            ~{formatCurrency(projection.dailyRate, "USD")}/day ·{" "}
+            projected{" "}
+            <span className={`font-semibold ${projection.projected > budget.budget ? "text-amber-600 dark:text-amber-400" : ""}`}>
+              {formatCurrency(projection.projected, "USD")}
+            </span>
+            {" "}total
+            {projection.daysLeft > 0 && ` · ${projection.daysLeft}d left`}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
