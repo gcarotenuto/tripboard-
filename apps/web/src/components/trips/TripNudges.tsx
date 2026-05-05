@@ -4,6 +4,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { ArrowRight, X } from "lucide-react";
 import { useState } from "react";
+import { formatCurrency } from "@tripboard/shared";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -156,11 +157,11 @@ function buildNudges(
     }
 
     if (isOverBudget && budget?.budget) {
-      const over = Math.round(stats.expenseTotal - budget.budget);
+      const over = stats.expenseTotal - budget.budget;
       nudges.unshift({
         id: "over-budget",
         emoji: "🚨",
-        message: `You're over budget by ${over} ${stats.expenseCurrency}. Review your spending.`,
+        message: `You're over budget by ${formatCurrency(over, stats.expenseCurrency)}. Review your spending.`,
         cta: { label: "View expenses", href: `/trips/${tripId}/expenses` },
         variant: "urgent",
       });
