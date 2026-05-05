@@ -186,7 +186,12 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((e) => e.title.toLowerCase().includes(q));
+      list = list.filter(
+        (e) =>
+          e.title.toLowerCase().includes(q) ||
+          (e.notes ?? "").toLowerCase().includes(q) ||
+          (EXPENSE_CATEGORY_LABELS[e.category] ?? "").toLowerCase().includes(q)
+      );
     }
     list.sort((a, b) => {
       if (sort === "date-desc") return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -363,8 +368,11 @@ export function ExpenseList({ tripId }: { tripId: string }) {
               <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                 {expense.title}
               </p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
                 {EXPENSE_CATEGORY_LABELS[expense.category]} · {formatDate(expense.date)}
+                {expense.notes && (
+                  <span className="text-zinc-300 dark:text-zinc-600"> · {expense.notes}</span>
+                )}
               </p>
             </div>
             <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 shrink-0">
