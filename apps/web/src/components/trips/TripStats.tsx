@@ -18,6 +18,23 @@ interface TripStatsData {
   startsAt?: string | null;
 }
 
+interface BudgetData {
+  budget: number | null;
+  budgetCurrency: string;
+}
+
+function fmtCurrency(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${Math.round(amount)} ${currency}`;
+  }
+}
+
 function getDaysUntil(startsAt: string | null | undefined): number | null {
   if (!startsAt) return null;
   const diff = new Date(startsAt).getTime() - Date.now();
@@ -99,6 +116,9 @@ function StatCard({
 
 export function TripStats({ tripId, status }: { tripId: string; status?: string }) {
   const { data } = useSWR<TripStatsData>(`/api/trips/${tripId}/stats`, fetcher);
+  const { data: budgetData } = useSWR<BudgetData>(`/api/trips/${tripId}/budget`, fetcher, {
+    revalidateOnFocus: false,
+  });
 
   const daysUntil = data ? getDaysUntil(data.startsAt) : null;
   const extractedDocs = data?.extractedDocumentCount ?? null;
@@ -117,8 +137,21 @@ export function TripStats({ tripId, status }: { tripId: string; status?: string 
     now.setHours(0, 0, 0, 0);
     const daysElapsed = Math.max(1, Math.floor((now.getTime() - start.getTime()) / 86400000) + 1);
     const avg = Math.round((data.expenseTotal / daysElapsed) * 10) / 10;
-    return `~${avg} ${data.expenseCurrency}/day`;
+    return `~${fmtCurrency(avg, data.expenseCurrency)}/day`;
   })();
+
+  // Budget progress — shown when budget is set and expenses exist
+  const budgetProgress = (() => {
+    if (!budgetData?.budget || !data?.expenseTotal) return null;
+    const pct = Math.min((data.expenseTotal / budgetData.budget) * 100, 100);
+    const over = data.expenseTotal > budgetData.budget;
+    return { pct, over, budget: budgetData.budget, currency: budgetData.budgetCurrency };
+  })();
+
+  // Formatted spend value
+  const spendDisplay = data?.expenseTotal
+    ? fmtCurrency(data.expenseTotal, data.expenseCurrency)
+    : null;
 
   return (
     <div className="space-y-3">
@@ -147,10 +180,39 @@ export function TripStats({ tripId, status }: { tripId: string; status?: string 
           sub={extractedDocs !== null && totalDocs > 0 ? `${extractedDocs}/${totalDocs} extracted` : null} />
         <StatCard emoji="📓" label="Journal"      value={data?.journalEntryCount ?? null} delay={120} />
         <StatCard emoji="💳" label="Total spend"
-          value={data?.expenseTotal ? `${data.expenseTotal} ${data.expenseCurrency}` : null}
+          value={spendDisplay}
           sub={avgDailySpend}
           delay={180} />
       </div>
+
+      {/* Budget mini-bar — shown when budget is set */}
+      {budgetProgress && (
+        <div className="rounded-xl border border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3 animate-[fadeIn_0.5s_ease-out_0.25s_both]">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <span>🎯</span> Budget
+            </span>
+            <span className={`text-xs font-semibold ${budgetProgress.over ? "text-red-600 dark:text-red-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+              {fmtCurrency(data!.expenseTotal, data!.expenseCurrency)}
+              {" / "}
+              {fmtCurrency(budgetProgress.budget, budgetProgress.currency)}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${
+                budgetProgress.over ? "bg-red-500" : budgetProgress.pct > 80 ? "bg-amber-500" : "bg-emerald-500"
+              }`}
+              style={{ width: `${budgetProgress.pct}%` }}
+            />
+          </div>
+          <p className={`mt-1 text-[10px] ${budgetProgress.over ? "text-red-500 dark:text-red-400" : "text-zinc-400 dark:text-zinc-500"}`}>
+            {budgetProgress.over
+              ? `Over budget by ${fmtCurrency(data!.expenseTotal - budgetProgress.budget, data!.expenseCurrency)}`
+              : `${fmtCurrency(budgetProgress.budget - data!.expenseTotal, budgetProgress.currency)} remaining`}
+          </p>
+        </div>
+      )}
 
       {/* Packing progress bar — only shown when items exist */}
       {packingPct !== null && (
