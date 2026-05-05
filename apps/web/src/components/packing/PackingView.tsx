@@ -170,6 +170,9 @@ export function PackingView({ tripId }: { tripId: string }) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
 
+  // Global pack/unpack all
+  const [packingAll, setPackingAll] = useState(false);
+
   // ── Derived stats ──────────────────────────────────────────────────────────
 
   const items = list?.items ?? [];
@@ -278,6 +281,49 @@ export function PackingView({ tripId }: { tripId: string }) {
     }
   }
 
+  async function handlePackAll(pack: boolean) {
+    const targets = items.filter((i) => i.isPacked !== pack);
+    if (!targets.length) return;
+    setPackingAll(true);
+    try {
+      await Promise.all(
+        targets.map((item) =>
+          fetch(`/api/trips/${tripId}/packing/${item.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isPacked: pack }),
+          })
+        )
+      );
+      await globalMutate(apiKey);
+      globalMutate(`/api/trips/${tripId}/stats`);
+      if (pack) {
+        // Check confetti
+        confettiFired.current = false;
+        const fresh = (await fetch(apiKey).then((r) => r.json()).catch(() => null))?.data;
+        if (fresh) {
+          const total = fresh.items.length;
+          const packed = fresh.items.filter((i: PackingItem) => i.isPacked).length;
+          if (total > 0 && packed === total && !confettiFired.current) {
+            confettiFired.current = true;
+            import("canvas-confetti").then(({ default: confetti }) => {
+              confetti({ particleCount: 160, spread: 80, origin: { y: 0.6 },
+                colors: ["#6366f1", "#8b5cf6", "#a78bfa", "#34d399", "#fbbf24"] });
+              setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55,
+                origin: { x: 0 }, colors: ["#6366f1", "#34d399"] }), 200);
+              setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55,
+                origin: { x: 1 }, colors: ["#f472b6", "#fbbf24"] }), 400);
+            });
+          }
+        }
+      }
+    } catch {
+      toast("Failed to update items — please try again", "error");
+    } finally {
+      setPackingAll(false);
+    }
+  }
+
   async function handleApplyTemplate(templateKey: string) {
     const template = TEMPLATES[templateKey];
     if (!template) return;
@@ -346,9 +392,20 @@ export function PackingView({ tripId }: { tripId: string }) {
           <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             {packedCount} of {totalCount} items packed
           </span>
-          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-            {progressPct}%
-          </span>
+          <div className="flex items-center gap-2.5">
+            {totalCount > 0 && (
+              <button
+                onClick={() => handlePackAll(packedCount < totalCount)}
+                disabled={packingAll}
+                className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-40 transition-colors"
+              >
+                {packingAll ? "Updating…" : packedCount < totalCount ? "Pack all" : "Unpack all"}
+              </button>
+            )}
+            <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+              {progressPct}%
+            </span>
+          </div>
         </div>
         <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
           <div
