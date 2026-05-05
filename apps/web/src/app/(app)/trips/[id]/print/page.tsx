@@ -4,22 +4,30 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { PrintActions } from "./PrintActions";
 
+// Legacy semantic moods (old entries) + emoji moods (new entries)
 const MOOD_LABELS: Record<string, string> = {
   AMAZING: "🤩 Amazing",
   HAPPY: "😊 Happy",
   OKAY: "😐 Okay",
   TIRED: "😴 Tired",
   STRESSED: "😤 Stressed",
+  "🤩": "🤩 Excited",
+  "😄": "😄 Happy",
+  "😊": "😊 Content",
+  "😐": "😐 Neutral",
+  "😴": "😴 Tired",
+  "😤": "😤 Frustrated",
 };
 
+// Matches PackingView.tsx CATEGORY_EMOJI
 const PACKING_CATEGORY_EMOJIS: Record<string, string> = {
   CLOTHING: "👕",
   TOILETRIES: "🧴",
-  ELECTRONICS: "🔌",
   DOCUMENTS: "📄",
-  MEDICATIONS: "💊",
-  GEAR: "🎒",
-  OTHER: "📦",
+  ELECTRONICS: "💻",
+  HEALTH: "💊",
+  MONEY: "💳",
+  OTHER: "🎒",
 };
 
 interface PrintPageProps {

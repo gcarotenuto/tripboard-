@@ -153,10 +153,14 @@ export function PackingView({ tripId }: { tripId: string }) {
   // Add-item form state
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<Category>("OTHER");
+  const [newQuantity, setNewQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
 
   // Delete confirmation
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+
+  // Quantity stepper
+  const [updatingQtyId, setUpdatingQtyId] = useState<string | null>(null);
 
   // Template picker visibility
   const [showTemplates, setShowTemplates] = useState(false);
@@ -216,6 +220,22 @@ export function PackingView({ tripId }: { tripId: string }) {
     toast(`"${item.name}" removed`);
   }
 
+  async function handleQuantityChange(item: PackingItem, delta: number) {
+    const next = Math.max(1, item.quantity + delta);
+    if (next === item.quantity) return;
+    setUpdatingQtyId(item.id);
+    try {
+      await fetch(`/api/trips/${tripId}/packing/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: next }),
+      });
+      globalMutate(apiKey);
+    } finally {
+      setUpdatingQtyId(null);
+    }
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim()) return;
@@ -224,9 +244,10 @@ export function PackingView({ tripId }: { tripId: string }) {
       await fetch(`/api/trips/${tripId}/packing`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim(), category: newCategory }),
+        body: JSON.stringify({ name: newName.trim(), category: newCategory, quantity: newQuantity }),
       });
       setNewName("");
+      setNewQuantity(1);
       globalMutate(apiKey);
       globalMutate(`/api/trips/${tripId}/stats`);
     } catch {
@@ -472,12 +493,24 @@ export function PackingView({ tripId }: { tripId: string }) {
                     {item.name}
                   </span>
 
-                  {/* Quantity badge (only if >1) */}
-                  {item.quantity > 1 && (
-                    <span className="shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                      ×{item.quantity}
+                  {/* Quantity stepper */}
+                  <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleQuantityChange(item, -1)}
+                      disabled={item.quantity <= 1 || updatingQtyId === item.id}
+                      className="h-5 w-5 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-30 text-sm leading-none"
+                      title="Decrease quantity"
+                    >−</button>
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 min-w-[20px] text-center tabular-nums">
+                      {item.quantity}
                     </span>
-                  )}
+                    <button
+                      onClick={() => handleQuantityChange(item, +1)}
+                      disabled={updatingQtyId === item.id}
+                      className="h-5 w-5 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm leading-none"
+                      title="Increase quantity"
+                    >+</button>
+                  </div>
 
                   {/* Delete (hover reveal) — with inline confirmation */}
                   <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -538,6 +571,22 @@ export function PackingView({ tripId }: { tripId: string }) {
               </option>
             ))}
           </select>
+          {/* Quantity stepper in add form */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setNewQuantity((q) => Math.max(1, q - 1))}
+              disabled={newQuantity <= 1 || adding}
+              className="h-8 w-8 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-30 text-lg leading-none flex items-center justify-center"
+            >−</button>
+            <span className="w-6 text-center text-sm font-medium text-zinc-700 dark:text-zinc-300 tabular-nums">{newQuantity}</span>
+            <button
+              type="button"
+              onClick={() => setNewQuantity((q) => q + 1)}
+              disabled={adding}
+              className="h-8 w-8 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-lg leading-none flex items-center justify-center"
+            >+</button>
+          </div>
           <button
             type="submit"
             disabled={adding || !newName.trim()}
