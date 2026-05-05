@@ -162,6 +162,10 @@ export function PackingView({ tripId }: { tripId: string }) {
   // Quantity stepper
   const [updatingQtyId, setUpdatingQtyId] = useState<string | null>(null);
 
+  // Inline name editing
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState("");
+
   // Template picker visibility
   const [showTemplates, setShowTemplates] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
@@ -234,6 +238,23 @@ export function PackingView({ tripId }: { tripId: string }) {
     } finally {
       setUpdatingQtyId(null);
     }
+  }
+
+  function startEditName(item: PackingItem) {
+    setEditingNameId(item.id);
+    setEditingNameValue(item.name);
+  }
+
+  async function commitRename(item: PackingItem) {
+    const trimmed = editingNameValue.trim();
+    setEditingNameId(null);
+    if (!trimmed || trimmed === item.name) return;
+    await fetch(`/api/trips/${tripId}/packing/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    globalMutate(apiKey);
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -482,16 +503,33 @@ export function PackingView({ tripId }: { tripId: string }) {
                     )}
                   </button>
 
-                  {/* Name */}
-                  <span
-                    className={`flex-1 text-sm transition-colors ${
-                      item.isPacked
-                        ? "line-through text-zinc-400 dark:text-zinc-600"
-                        : "text-zinc-800 dark:text-zinc-200"
-                    }`}
-                  >
-                    {item.name}
-                  </span>
+                  {/* Name — double-click to rename */}
+                  {editingNameId === item.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editingNameValue}
+                      onChange={(e) => setEditingNameValue(e.target.value)}
+                      onBlur={() => commitRename(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); void commitRename(item); }
+                        if (e.key === "Escape") { setEditingNameId(null); }
+                      }}
+                      className="flex-1 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  ) : (
+                    <span
+                      onDoubleClick={() => !item.isPacked && startEditName(item)}
+                      title={item.isPacked ? undefined : "Double-click to rename"}
+                      className={`flex-1 text-sm transition-colors ${
+                        item.isPacked
+                          ? "line-through text-zinc-400 dark:text-zinc-600"
+                          : "text-zinc-800 dark:text-zinc-200 cursor-text"
+                      }`}
+                    >
+                      {item.name}
+                    </span>
+                  )}
 
                   {/* Quantity stepper */}
                   <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
