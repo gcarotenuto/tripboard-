@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
 import type { Document } from "@tripboard/shared";
 import { DOCUMENT_TYPE_EMOJIS, DOCUMENT_TYPE_LABELS, formatFileSize, formatDate } from "@tripboard/shared";
 import { Badge } from "@tripboard/ui";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { Trash2, AlertTriangle, Search, X } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
@@ -65,6 +65,7 @@ export function DocumentVault({ tripId }: { tripId: string }) {
   );
   const { toast } = useToast();
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [vaultSearch, setVaultSearch] = useState("");
   // "_cancel_" is a sentinel value meaning "clear the pending delete"
   function requestDelete(id: string) { setDeletingDocId(id === "_cancel_" ? null : id); }
 
@@ -141,16 +142,55 @@ export function DocumentVault({ tripId }: { tripId: string }) {
     </div>
   );
 
-  const readyToday = documents.filter(isReadyToday);
-  const needsReview = documents.filter(
+  // Apply search filter
+  const visibleDocs = useMemo(() => {
+    if (!vaultSearch.trim()) return documents;
+    const q = vaultSearch.trim().toLowerCase();
+    return documents.filter((d) =>
+      d.title.toLowerCase().includes(q) ||
+      (DOCUMENT_TYPE_LABELS[d.type] ?? "").toLowerCase().includes(q)
+    );
+  }, [documents, vaultSearch]);
+
+  const readyToday = visibleDocs.filter(isReadyToday);
+  const needsReview = visibleDocs.filter(
     (d) => d.extractionConfidence !== null && (d.extractionConfidence as unknown as number) < 0.7 && d.status !== "FAILED"
   );
-  const rest = documents.filter((d) => !readyToday.includes(d) && !needsReview.includes(d));
+  const rest = visibleDocs.filter((d) => !readyToday.includes(d) && !needsReview.includes(d));
 
   const rowProps = { deletingDocId, onDeleteRequest: requestDelete, onDeleteConfirm: handleDeleteDoc };
 
   return (
     <div className="space-y-6">
+      {/* Search — shown when there are documents */}
+      {documents.length > 3 && (
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search documents…"
+            value={vaultSearch}
+            onChange={(e) => setVaultSearch(e.target.value)}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-8 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-shadow"
+          />
+          {vaultSearch && (
+            <button
+              onClick={() => setVaultSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* No search results */}
+      {vaultSearch && visibleDocs.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 py-8 text-center">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">No documents match &ldquo;{vaultSearch}&rdquo;</p>
+          <button onClick={() => setVaultSearch("")} className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Clear search</button>
+        </div>
+      )}
       {/* Ready Today bundle */}
       {readyToday.length > 0 && (
         <section>
