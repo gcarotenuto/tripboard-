@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TripSummary } from "@tripboard/shared";
 import { formatDate, getTripDurationDays } from "@tripboard/shared";
-import { MapPin, Calendar, Wand2, ArrowUpDown } from "lucide-react";
+import { MapPin, Calendar, Wand2, ArrowUpDown, Search, X } from "lucide-react";
 import { CoverUpload } from "@/components/trips/CoverUpload";
 
 type SortOption = "date-desc" | "date-asc" | "name-asc";
@@ -80,6 +80,7 @@ export function TripGrid() {
   const [sort, setSort] = useState<SortOption>("date-desc");
   const [sortOpen, setSortOpen] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const { data: trips, isLoading, error, mutate } = useSWR<TripSummary[]>("/api/trips", fetcher);
   const router = useRouter();
 
@@ -108,6 +109,13 @@ export function TripGrid() {
         .filter((t) => {
           if (filter !== "All" && t.status !== filter.toUpperCase()) return false;
           if (tagFilter && !(t.tags ?? []).includes(tagFilter)) return false;
+          if (search) {
+            const q = search.toLowerCase();
+            const inTitle = t.title.toLowerCase().includes(q);
+            const inDest = (t.primaryDestination ?? "").toLowerCase().includes(q);
+            const inTags = (t.tags ?? []).some((tag) => tag.toLowerCase().includes(q));
+            if (!inTitle && !inDest && !inTags) return false;
+          }
           return true;
         })
         .sort((a, b) => {
@@ -125,6 +133,28 @@ export function TripGrid() {
 
   return (
     <>
+      {/* Search bar */}
+      {trips && trips.length > 0 && (
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search trips…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-8 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-shadow"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Status filter tabs + sort */}
       <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-1">
         <div className="flex gap-1.5 flex-1 min-w-0 overflow-x-auto">
@@ -232,11 +262,17 @@ export function TripGrid() {
           <p className="text-sm text-red-600 dark:text-red-400">Could not load trips. Please refresh.</p>
         </div>
       ) : filtered.length === 0 ? (
-        filter !== "All" ? (
+        search ? (
           <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 p-12 text-center">
             <div className="text-3xl mb-3">🔍</div>
-            <p className="font-medium text-zinc-700 dark:text-zinc-300">No {filter.toLowerCase()} trips</p>
-            <button onClick={() => setFilter("All")} className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View all trips</button>
+            <p className="font-medium text-zinc-700 dark:text-zinc-300">No trips match &ldquo;{search}&rdquo;</p>
+            <button onClick={() => setSearch("")} className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">Clear search</button>
+          </div>
+        ) : filter !== "All" || tagFilter ? (
+          <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 p-12 text-center">
+            <div className="text-3xl mb-3">🔍</div>
+            <p className="font-medium text-zinc-700 dark:text-zinc-300">No {filter !== "All" ? filter.toLowerCase() : ""} trips{tagFilter ? ` tagged "${tagFilter}"` : ""}</p>
+            <button onClick={() => { setFilter("All"); setTagFilter(null); }} className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View all trips</button>
           </div>
         ) : (
           /* First-time user: rich onboarding state */
@@ -330,15 +366,19 @@ function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
     return { dayNumber, totalDays };
   })();
 
-  // 3D tilt effect
+  // 3D tilt effect (respects prefers-reduced-motion)
+  const prefersReducedMotion =
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (prefersReducedMotion) return;
     const card = cardRef.current;
     if (!card) return;
     const { left, top, width, height } = card.getBoundingClientRect();
     const x = (e.clientX - left) / width - 0.5;   // -0.5 to 0.5
     const y = (e.clientY - top) / height - 0.5;
     card.style.transform = `perspective(700px) rotateX(${-y * 7}deg) rotateY(${x * 7}deg) translateZ(4px)`;
-  }, []);
+  }, [prefersReducedMotion]);
 
   const handleMouseLeave = useCallback(() => {
     if (cardRef.current) {
