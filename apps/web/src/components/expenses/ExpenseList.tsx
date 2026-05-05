@@ -75,6 +75,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
 
   // Filter + sort state
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
+  const [filterPaid, setFilterPaid] = useState<"ALL" | "PAID" | "UNPAID">("ALL");
   const [sort, setSort] = useState<SortOption>("date-desc");
   const [search, setSearch] = useState("");
 
@@ -184,6 +185,8 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     if (filterCategory !== "ALL") {
       list = list.filter((e) => e.category === filterCategory);
     }
+    if (filterPaid === "PAID") list = list.filter((e) => e.isPaid);
+    if (filterPaid === "UNPAID") list = list.filter((e) => !e.isPaid);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -203,7 +206,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     return list;
   }, [expenses, filterCategory, sort, search]);
 
-  const isFiltering = filterCategory !== "ALL" || search.trim().length > 0;
+  const isFiltering = filterCategory !== "ALL" || filterPaid !== "ALL" || search.trim().length > 0;
 
   // Group by date when sorting date-desc / date-asc; otherwise a single group with no label
   const expenseGroups = useMemo(() => {
@@ -311,6 +314,17 @@ export function ExpenseList({ tripId }: { tripId: string }) {
           {availableCategories.map((cat) => (
             <option key={cat} value={cat}>{EXPENSE_CATEGORY_LABELS[cat]}</option>
           ))}
+        </select>
+
+        {/* Paid/unpaid filter */}
+        <select
+          value={filterPaid}
+          onChange={(e) => setFilterPaid(e.target.value as "ALL" | "PAID" | "UNPAID")}
+          className={SELECT_CLASS}
+        >
+          <option value="ALL">All statuses</option>
+          <option value="PAID">Paid only</option>
+          <option value="UNPAID">Unpaid only</option>
         </select>
 
         {/* Sort */}
