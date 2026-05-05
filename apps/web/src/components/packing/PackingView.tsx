@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
-import { Trash2, Plus, Luggage, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Luggage, AlertTriangle, Search, X } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -173,6 +173,9 @@ export function PackingView({ tripId }: { tripId: string }) {
   // Global pack/unpack all
   const [packingAll, setPackingAll] = useState(false);
 
+  // Search filter
+  const [packSearch, setPackSearch] = useState("");
+
   // ── Derived stats ──────────────────────────────────────────────────────────
 
   const items = list?.items ?? [];
@@ -180,12 +183,19 @@ export function PackingView({ tripId }: { tripId: string }) {
   const packedCount = items.filter((i) => i.isPacked).length;
   const progressPct = totalCount === 0 ? 0 : Math.round((packedCount / totalCount) * 100);
 
-  // Group by category, only show categories that have items
-  const grouped = CATEGORIES.reduce<Record<string, PackingItem[]>>((acc, cat) => {
-    const catItems = items.filter((i) => i.category === cat);
-    if (catItems.length > 0) acc[cat] = catItems;
-    return acc;
-  }, {});
+  // Group by category, only show categories that have items, applying search filter
+  const grouped = useMemo(() => {
+    const q = packSearch.trim().toLowerCase();
+    return CATEGORIES.reduce<Record<string, PackingItem[]>>((acc, cat) => {
+      const catItems = items.filter((i) => {
+        if (i.category !== cat) return false;
+        if (q && !i.name.toLowerCase().includes(q)) return false;
+        return true;
+      });
+      if (catItems.length > 0) acc[cat] = catItems;
+      return acc;
+    }, {});
+  }, [items, packSearch]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -452,7 +462,37 @@ export function PackingView({ tripId }: { tripId: string }) {
       </div>
 
       {/* Grouped items */}
-      {Object.keys(grouped).length === 0 && !applyingTemplate && (
+      {/* Search — only shown when there are items */}
+      {totalCount > 5 && (
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Find an item…"
+            value={packSearch}
+            onChange={(e) => setPackSearch(e.target.value)}
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-8 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-shadow"
+          />
+          {packSearch && (
+            <button
+              onClick={() => setPackSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* No search results */}
+      {packSearch && Object.keys(grouped).length === 0 && (
+        <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 py-8 text-center">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">No items match &ldquo;{packSearch}&rdquo;</p>
+          <button onClick={() => setPackSearch("")} className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Clear search</button>
+        </div>
+      )}
+
+      {Object.keys(grouped).length === 0 && !applyingTemplate && !packSearch && (
         <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800 overflow-hidden">
           {/* Hero */}
           <div className="bg-gradient-to-br from-emerald-50/70 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20 px-8 py-7 text-center">
