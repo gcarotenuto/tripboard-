@@ -52,7 +52,7 @@ function getHeroGradient(dest: string, status: string): string {
   return "from-indigo-500/15 via-violet-400/10 to-transparent";
 }
 
-const NAV_ITEMS = [
+const NAV_ITEMS_BASE = [
   { href: "timeline", label: "Timeline", Icon: CalendarDays, description: "Bookings & moments" },
   { href: "vault", label: "Vault", Icon: Lock, description: "Documents & tickets" },
   { href: "journal", label: "Journal", Icon: BookOpen, description: "Notes & memories" },
@@ -79,6 +79,20 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
     },
   });
   if (!trip) notFound();
+
+  // Fetch section content counts for nav badges
+  const [eventCount, documentCount, journalCount, expenseCount, packingList, mapPinCount] = await Promise.all([
+    prisma.tripEvent.count({ where: { tripId: params.id } }),
+    prisma.document.count({ where: { tripId: params.id, deletedAt: null } }),
+    prisma.journalEntry.count({ where: { tripId: params.id, deletedAt: null } }),
+    prisma.expense.count({ where: { tripId: params.id } }),
+    prisma.packingList.findUnique({
+      where: { tripId: params.id },
+      select: { _count: { select: { items: true } } },
+    }),
+    prisma.tripEvent.count({ where: { tripId: params.id, locationName: { not: null } } }),
+  ]);
+  const packingCount = packingList?._count.items ?? 0;
 
   const destinations: Array<{ city: string; country: string }> = JSON.parse(
     (trip.destinations as unknown as string) || "[]"
@@ -223,30 +237,52 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
         <WeatherWidget tripId={params.id} />
 
         {/* Module nav */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">
-            Navigate
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={`/trips/${params.id}/${item.href}`}
-                className="group flex flex-col gap-3 rounded-2xl border border-zinc-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900 p-4 hover:border-indigo-300 hover:bg-indigo-50/40 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/30 transition-all"
-              >
-                <div className="h-8 w-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
-                  <item.Icon className="h-4 w-4 text-zinc-500 dark:text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
-                    {item.label}
-                  </p>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-0.5">{item.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+        {(() => {
+          const navCounts: Record<string, number> = {
+            timeline: eventCount,
+            vault: documentCount,
+            journal: journalCount,
+            expenses: expenseCount,
+            packing: packingCount,
+            map: mapPinCount,
+          };
+          return (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">
+                Navigate
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {NAV_ITEMS_BASE.map((item) => {
+                  const count = navCounts[item.href] ?? 0;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={`/trips/${params.id}/${item.href}`}
+                      className="group flex flex-col gap-3 rounded-2xl border border-zinc-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900 p-4 hover:border-indigo-300 hover:bg-indigo-50/40 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/30 transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="h-8 w-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
+                          <item.Icon className="h-4 w-4 text-zinc-500 dark:text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                        </div>
+                        {count > 0 && (
+                          <span className="text-[11px] font-semibold tabular-nums text-zinc-400 dark:text-zinc-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+                            {count}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
+                          {item.label}
+                        </p>
+                        <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-0.5">{item.description}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* AI Assistant */}
         <div>
