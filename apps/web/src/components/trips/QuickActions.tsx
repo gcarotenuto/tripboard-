@@ -427,7 +427,7 @@ export function QuickActions({ tripId }: { tripId: string }) {
     },
     {
       type: "link" as const,
-      href: `/trips/${tripId}/timeline?add=event`,
+      href: `/trips/${tripId}/timeline`,
       icon: <span>✏️</span>,
       label: "Add event",
       color: "hover:border-indigo-200 dark:hover:border-indigo-800 hover:text-indigo-700 dark:hover:text-indigo-400",
