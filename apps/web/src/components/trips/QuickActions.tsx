@@ -3,13 +3,10 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { mutate } from "swr";
-import useSWR from "swr";
 import { PlusCircle, Loader2, BookOpen, Luggage } from "lucide-react";
 import { ALL_CURRENCIES } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
-
-const prefFetcher = (url: string) =>
-  fetch(url).then((r) => r.json()).then((r) => r.preferences as Record<string, string> | undefined);
+import { useUserPreferences, useFormatDate } from "@/context/UserPreferencesContext";
 
 // ── Quick Expense Modal ────────────────────────────────────────────────────────
 
@@ -20,17 +17,8 @@ interface QuickModalBaseProps {
 
 function QuickExpenseModal({ tripId, onClose }: QuickModalBaseProps) {
   const { toast } = useToast();
-  const { data: prefs } = useSWR("/api/user/profile", prefFetcher, { revalidateOnFocus: false });
-  const defaultCurrency = prefs?.defaultCurrency ?? "EUR";
-  const [form, setForm] = useState({ title: "", amount: "", currency: defaultCurrency, category: "OTHER" });
-
-  // Sync currency once prefs load (only if user hasn't changed it yet)
-  useEffect(() => {
-    if (prefs?.defaultCurrency) {
-      setForm((f) => ({ ...f, currency: prefs.defaultCurrency! }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefs?.defaultCurrency]);
+  const { preferences } = useUserPreferences();
+  const [form, setForm] = useState({ title: "", amount: "", currency: preferences.defaultCurrency, category: "OTHER" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -161,6 +149,7 @@ const MOODS = [
 
 function QuickJournalModal({ tripId, onClose }: QuickModalBaseProps) {
   const { toast } = useToast();
+  const fmtDate = useFormatDate();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [mood, setMood] = useState<string | null>(null);
@@ -185,7 +174,7 @@ function QuickJournalModal({ tripId, onClose }: QuickModalBaseProps) {
     setSaving(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const autoTitle = title.trim() || `${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`;
+      const autoTitle = title.trim() || fmtDate(new Date());
       const res = await fetch(`/api/trips/${tripId}/journal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -211,9 +200,7 @@ function QuickJournalModal({ tripId, onClose }: QuickModalBaseProps) {
     }
   };
 
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric",
-  });
+  const today = fmtDate(new Date());
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
