@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Loader2, AlertTriangle, Archive, Copy, CheckCircle2, X, Sparkles } from "lucide-react";
 import { EditTripModal } from "./EditTripModal";
 import { useToast } from "@/components/ui/Toast";
+import { formatCurrency } from "@tripboard/shared";
 
 interface TripStats {
   eventCount: number;
@@ -70,7 +71,7 @@ function CompletionModal({
               emoji: "💳",
               label: "Total spent",
               value: stats.expenseTotal > 0
-                ? `${Math.round(stats.expenseTotal)} ${stats.expenseCurrency}`
+                ? formatCurrency(stats.expenseTotal, stats.expenseCurrency)
                 : "—",
             },
             ...(totalDays ? [{ emoji: "🗓️", label: "Days traveled", value: totalDays }] : []),
