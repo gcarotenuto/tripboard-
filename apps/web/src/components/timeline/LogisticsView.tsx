@@ -6,13 +6,13 @@ import Link from "next/link";
 import { Trash2, Pencil, X, Search, AlertTriangle } from "lucide-react";
 import type { TripEvent, EventType } from "@tripboard/shared";
 import {
-  formatDate,
   formatTime,
   groupEventsByDay,
   EVENT_TYPE_EMOJIS,
   EVENT_TYPE_LABELS,
 } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 function LogisticsSkeleton() {
   return (
@@ -103,6 +103,7 @@ export function LogisticsView({ tripId }: { tripId: string }) {
   );
 
   const { toast } = useToast();
+  const fmtDate = useFormatDate();
   const [editingEvent, setEditingEvent] = useState<TripEvent | null>(null);
   const [form, setForm] = useState<EditForm>({ title: "", startsAt: "", endsAt: "", locationName: "", notes: "" });
   const [saving, setSaving] = useState(false);
@@ -344,7 +345,7 @@ export function LogisticsView({ tripId }: { tripId: string }) {
             {/* Day header */}
             <div className="sticky top-0 z-10 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur py-2 mb-3 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
-                {day === "undated" ? "Undated" : formatDate(day)}
+                {day === "undated" ? "Undated" : fmtDate(day)}
               </p>
               <span className="text-xs text-zinc-400 dark:text-zinc-500">
                 {(grouped[day] as unknown as TripEvent[]).length} event{(grouped[day] as unknown as TripEvent[]).length !== 1 ? "s" : ""}

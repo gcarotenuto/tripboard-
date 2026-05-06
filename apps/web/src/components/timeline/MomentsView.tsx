@@ -3,7 +3,8 @@
 import useSWR from "swr";
 import Link from "next/link";
 import type { TripEvent, JournalEntry } from "@tripboard/shared";
-import { formatDate, EVENT_TYPE_EMOJIS } from "@tripboard/shared";
+import { EVENT_TYPE_EMOJIS } from "@tripboard/shared";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -19,6 +20,7 @@ function toDateKey(d: string | Date | null): string {
 }
 
 export function MomentsView({ tripId }: { tripId: string }) {
+  const fmtDate = useFormatDate();
   const { data: events, isLoading: eventsLoading } = useSWR<TripEvent[]>(
     `/api/trips/${tripId}/events?view=MOMENTS`,
     fetcher
@@ -128,7 +130,7 @@ export function MomentsView({ tripId }: { tripId: string }) {
           <div className="sticky top-0 z-10 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur py-2 mb-4">
             <div className="flex items-baseline gap-3">
               <p className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                {day === "undated" ? "Undated" : formatDate(day)}
+                {day === "undated" ? "Undated" : fmtDate(day)}
               </p>
               <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
             </div>

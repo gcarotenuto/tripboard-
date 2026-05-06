@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { useToast } from "@/components/ui/Toast";
+import { ALL_CURRENCIES } from "@tripboard/shared";
+import { useUserPreferences } from "@/context/UserPreferencesContext";
 
 interface SettingsClientProps {
   user: { name: string | null; email: string | null; preferences?: Record<string, unknown> };
@@ -13,18 +15,21 @@ const LABEL = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5
 const INPUT = "w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400";
 const INPUT_DISABLED = "w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 px-3 py-2.5 text-sm text-zinc-500 dark:text-zinc-400 cursor-not-allowed";
 
-const CURRENCIES = [
-  // Major
-  "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD",
-  // Asia-Pacific
-  "CNY", "HKD", "SGD", "KRW", "THB", "MYR", "IDR", "PHP", "INR", "PKR", "BDT", "VND",
-  // Middle East & Africa
-  "AED", "SAR", "ILS", "TRY", "ZAR", "EGP", "NGN", "KES",
-  // Americas
-  "BRL", "MXN", "ARS", "CLP", "COP", "PEN",
-  // Europe (non-EUR)
-  "NOK", "SEK", "DKK", "PLN", "CZK", "HUF", "RON", "HRK", "BGN",
-];
+// Human-readable labels for currencies shown in the selector
+const CURRENCY_NAMES: Record<string, string> = {
+  USD: "US Dollar", EUR: "Euro", GBP: "British Pound", JPY: "Japanese Yen",
+  CHF: "Swiss Franc", CAD: "Canadian Dollar", AUD: "Australian Dollar", NZD: "New Zealand Dollar",
+  CNY: "Chinese Yuan", HKD: "Hong Kong Dollar", SGD: "Singapore Dollar", KRW: "South Korean Won",
+  THB: "Thai Baht", MYR: "Malaysian Ringgit", IDR: "Indonesian Rupiah", PHP: "Philippine Peso",
+  INR: "Indian Rupee", VND: "Vietnamese Dong",
+  AED: "UAE Dirham", SAR: "Saudi Riyal", ILS: "Israeli Shekel", TRY: "Turkish Lira",
+  ZAR: "South African Rand", EGP: "Egyptian Pound", NGN: "Nigerian Naira", KES: "Kenyan Shilling",
+  BRL: "Brazilian Real", MXN: "Mexican Peso", ARS: "Argentine Peso", CLP: "Chilean Peso",
+  COP: "Colombian Peso", PEN: "Peruvian Sol",
+  NOK: "Norwegian Krone", SEK: "Swedish Krona", DKK: "Danish Krone", PLN: "Polish Złoty",
+  CZK: "Czech Koruna", HUF: "Hungarian Forint", RON: "Romanian Leu",
+  HRK: "Croatian Kuna", BGN: "Bulgarian Lev",
+};
 
 const DATE_FORMATS = [
   { value: "MDY", label: "MM/DD/YYYY (US)" },
@@ -34,6 +39,7 @@ const DATE_FORMATS = [
 
 export function SettingsClient({ user }: SettingsClientProps) {
   const { toast } = useToast();
+  const { updatePreferences } = useUserPreferences();
   const [name, setName] = useState(user.name ?? "");
   const [nameSaved, setNameSaved] = useState(false);
   const [nameSaving, setNameSaving] = useState(false);
@@ -67,6 +73,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
 
   async function saveCurrency(value: string) {
     setDefaultCurrency(value);
+    updatePreferences({ defaultCurrency: value });
     try {
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
@@ -83,6 +90,7 @@ export function SettingsClient({ user }: SettingsClientProps) {
 
   async function saveDateFormat(value: string) {
     setDateFormat(value);
+    updatePreferences({ dateFormat: value as "MDY" | "DMY" | "YMD" });
     try {
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
@@ -144,10 +152,10 @@ export function SettingsClient({ user }: SettingsClientProps) {
               <select
                 value={defaultCurrency}
                 onChange={(e) => saveCurrency(e.target.value)}
-                className={`${INPUT} max-w-[200px]`}
+                className={`${INPUT} max-w-[260px]`}
               >
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                {ALL_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{c}{CURRENCY_NAMES[c] ? ` — ${CURRENCY_NAMES[c]}` : ""}</option>
                 ))}
               </select>
               {currencySaved && (
@@ -158,20 +166,32 @@ export function SettingsClient({ user }: SettingsClientProps) {
 
           <div>
             <label className={LABEL}>Date format</label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <select
                 value={dateFormat}
                 onChange={(e) => saveDateFormat(e.target.value)}
-                className={`${INPUT} max-w-[200px]`}
+                className={`${INPUT} max-w-[220px]`}
               >
                 {DATE_FORMATS.map((f) => (
                   <option key={f.value} value={f.value}>{f.label}</option>
                 ))}
               </select>
-              {dateFormatSaved && (
+              {dateFormatSaved ? (
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Saved!</span>
+              ) : (
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">
+                  e.g.{" "}
+                  {dateFormat === "YMD"
+                    ? "2025-07-15"
+                    : dateFormat === "DMY"
+                    ? "15 Jul 2025"
+                    : "Jul 15, 2025"}
+                </span>
               )}
             </div>
+            <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
+              Applied across all dates in the app — trips, events, expenses and more.
+            </p>
           </div>
         </div>
       </section>

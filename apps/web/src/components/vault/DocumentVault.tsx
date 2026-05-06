@@ -3,10 +3,11 @@
 import { useState, useMemo } from "react";
 import useSWR from "swr";
 import type { Document } from "@tripboard/shared";
-import { DOCUMENT_TYPE_EMOJIS, DOCUMENT_TYPE_LABELS, formatFileSize, formatDate } from "@tripboard/shared";
+import { DOCUMENT_TYPE_EMOJIS, DOCUMENT_TYPE_LABELS, formatFileSize } from "@tripboard/shared";
 import { Badge } from "@tripboard/ui";
 import { Trash2, AlertTriangle, Search, X } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -147,7 +148,7 @@ export function DocumentVault({ tripId }: { tripId: string }) {
     if (!vaultSearch.trim()) return documents;
     const q = vaultSearch.trim().toLowerCase();
     return documents.filter((d) =>
-      d.title.toLowerCase().includes(q) ||
+      d.filename.toLowerCase().includes(q) ||
       (DOCUMENT_TYPE_LABELS[d.type] ?? "").toLowerCase().includes(q)
     );
   }, [documents, vaultSearch]);
@@ -251,6 +252,7 @@ function DocumentRow({
   onDeleteRequest: (idOrCancel: string) => void;
   onDeleteConfirm: (doc: Document) => void;
 }) {
+  const fmtDate = useFormatDate();
   const status = STATUS_BADGE[doc.status] ?? STATUS_BADGE.PENDING;
   const sourceInfo = SOURCE_LABEL[doc.source ?? "MANUAL"] ?? SOURCE_LABEL.MANUAL;
   const confidence = doc.extractionConfidence as unknown as number | null;
@@ -316,7 +318,7 @@ function DocumentRow({
             {sourceInfo.label}
           </span>
           <span className="text-xs text-zinc-400 dark:text-zinc-500">{formatFileSize(doc.fileSize)}</span>
-          <span className="text-xs text-zinc-400 dark:text-zinc-500">{formatDate(doc.createdAt)}</span>
+          <span className="text-xs text-zinc-400 dark:text-zinc-500">{fmtDate(doc.createdAt)}</span>
         </div>
 
         {/* Confidence bar */}

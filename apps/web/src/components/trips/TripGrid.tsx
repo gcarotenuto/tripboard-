@@ -5,9 +5,10 @@ import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TripSummary } from "@tripboard/shared";
-import { formatDate, getTripDurationDays } from "@tripboard/shared";
+import { getTripDurationDays } from "@tripboard/shared";
 import { MapPin, Calendar, Wand2, ArrowUpDown, Search, X } from "lucide-react";
 import { CoverUpload } from "@/components/trips/CoverUpload";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 type SortOption = "date-desc" | "date-asc" | "name-asc";
 
@@ -325,6 +326,7 @@ export function TripGrid() {
 function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(trip.coverImageUrl ?? null);
   const cardRef = useRef<HTMLElement>(null);
+  const fmtDate = useFormatDate();
 
   const duration =
     trip.startsAt && trip.endsAt
@@ -487,7 +489,7 @@ function TripCard({ trip, index }: { trip: TripSummary; index: number }) {
             {trip.startsAt && (
               <div className="flex items-center gap-1.5 text-xs text-zinc-400 dark:text-zinc-500">
                 <Calendar className="h-3 w-3 shrink-0" />
-                {formatDate(trip.startsAt)}
+                {fmtDate(trip.startsAt)}
                 {duration ? ` · ${duration} days` : ""}
               </div>
             )}

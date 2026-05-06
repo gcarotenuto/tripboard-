@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { Trash2, Pencil, X, AlertTriangle, Search, ArrowUpDown } from "lucide-react";
 import type { JournalEntry } from "@tripboard/shared";
-import { formatDate } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -66,6 +66,7 @@ export function JournalView({ tripId }: { tripId: string }) {
     fetcher
   );
   const { toast } = useToast();
+  const fmtDate = useFormatDate();
 
   const [search, setSearch] = useState("");
   const [moodFilter, setMoodFilter] = useState<string | null>(null);
@@ -293,7 +294,7 @@ export function JournalView({ tripId }: { tripId: string }) {
               <span className="text-xl leading-none mt-0.5">{moodEmoji(entry.mood)}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-xs font-medium text-zinc-400">{formatDate(entry.entryDate)}</p>
+                  <p className="text-xs font-medium text-zinc-400">{fmtDate(entry.entryDate)}</p>
                   <span className="text-zinc-200 dark:text-zinc-700 select-none">·</span>
                   <p className="text-xs text-zinc-300 dark:text-zinc-600 tabular-nums">
                     {entry.content.trim().split(/\s+/).filter(Boolean).length}w

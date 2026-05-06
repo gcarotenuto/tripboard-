@@ -1,3 +1,5 @@
+export type DateFormatPref = "MDY" | "DMY" | "YMD";
+
 export function formatDate(date: string | Date, timezone?: string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("en-US", {
@@ -6,6 +8,27 @@ export function formatDate(date: string | Date, timezone?: string): string {
     day: "numeric",
     timeZone: timezone,
   });
+}
+
+/** Format a date according to the user's preferred format setting. */
+export function formatDateByPref(date: string | Date, pref: DateFormatPref = "MDY", timezone?: string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric", timeZone: timezone };
+  if (pref === "DMY") {
+    return d.toLocaleDateString("en-GB", opts);
+  }
+  if (pref === "YMD") {
+    // ISO-style: YYYY-MM-DD
+    const tzDate = timezone
+      ? new Date(d.toLocaleString("en-US", { timeZone: timezone }))
+      : d;
+    const y = tzDate.getFullYear();
+    const mo = String(tzDate.getMonth() + 1).padStart(2, "0");
+    const dy = String(tzDate.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${dy}`;
+  }
+  // MDY default
+  return d.toLocaleDateString("en-US", opts);
 }
 
 export function formatDateTime(date: string | Date, timezone?: string): string {

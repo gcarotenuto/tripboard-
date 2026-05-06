@@ -3,10 +3,11 @@
 import { useState, useMemo } from "react";
 import useSWR from "swr";
 import type { Trip } from "@tripboard/shared";
-import { formatDate, getTripDurationDays } from "@tripboard/shared";
+import { getTripDurationDays } from "@tripboard/shared";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { GenerateMemoryCapsuleButton } from "./GenerateMemoryCapsuleButton";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -153,6 +154,7 @@ export function ArchiveGrid() {
 }
 
 function MemoryCapsuleCard({ trip }: { trip: Trip }) {
+  const fmtDate = useFormatDate();
   const duration =
     trip.startsAt && trip.endsAt
       ? getTripDurationDays(trip.startsAt, trip.endsAt)
@@ -187,7 +189,7 @@ function MemoryCapsuleCard({ trip }: { trip: Trip }) {
               )}
               {trip.startsAt && (
                 <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                  {formatDate(trip.startsAt)}
+                  {fmtDate(trip.startsAt)}
                   {duration ? ` · ${duration} days` : ""}
                 </p>
               )}

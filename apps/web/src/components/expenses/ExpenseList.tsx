@@ -4,8 +4,9 @@ import { useState, useMemo, useEffect } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { Trash2, Pencil, X, Search, AlertTriangle, Download } from "lucide-react";
 import type { Expense, ExpenseCategory } from "@tripboard/shared";
-import { EXPENSE_CATEGORY_EMOJIS, EXPENSE_CATEGORY_LABELS, ALL_CURRENCIES, formatCurrency, formatDate } from "@tripboard/shared";
+import { EXPENSE_CATEGORY_EMOJIS, EXPENSE_CATEGORY_LABELS, ALL_CURRENCIES, formatCurrency } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -66,6 +67,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
     fetcher
   );
   const { toast } = useToast();
+  const fmtDate = useFormatDate();
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [form, setForm] = useState<EditForm>({ title: "", amount: "", currency: "EUR", category: "OTHER", date: "", notes: "" });
@@ -383,7 +385,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
                 {expense.title}
               </p>
               <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
-                {EXPENSE_CATEGORY_LABELS[expense.category]} · {formatDate(expense.date)}
+                {EXPENSE_CATEGORY_LABELS[expense.category]} · {fmtDate(expense.date)}
                 {expense.notes && (
                   <span className="text-zinc-300 dark:text-zinc-600"> · {expense.notes}</span>
                 )}
