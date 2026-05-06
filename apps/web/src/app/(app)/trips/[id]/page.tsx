@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { formatDateByPref, type DateFormatPref } from "@tripboard/shared";
 import { TripStats } from "@/components/trips/TripStats";
 import { TripSetupCard } from "@/components/trips/TripSetupCard";
 import { TodayAgenda } from "@/components/trips/TodayAgenda";
@@ -80,8 +81,8 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
   });
   if (!trip) notFound();
 
-  // Fetch section content counts for nav badges
-  const [eventCount, documentCount, journalCount, expenseCount, packingList, mapPinCount] = await Promise.all([
+  // Fetch section content counts + user preferences in parallel
+  const [eventCount, documentCount, journalCount, expenseCount, packingList, mapPinCount, userPrefs] = await Promise.all([
     prisma.tripEvent.count({ where: { tripId: params.id } }),
     prisma.document.count({ where: { tripId: params.id, deletedAt: null } }),
     prisma.journalEntry.count({ where: { tripId: params.id, deletedAt: null } }),
@@ -91,8 +92,18 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
       select: { _count: { select: { items: true } } },
     }),
     prisma.tripEvent.count({ where: { tripId: params.id, locationName: { not: null } } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } }),
   ]);
   const packingCount = packingList?._count.items ?? 0;
+
+  // Parse date format preference for server-side date rendering
+  let dateFormatPref: DateFormatPref = "MDY";
+  try {
+    const parsed = JSON.parse(userPrefs?.preferences ?? "{}") as Record<string, unknown>;
+    if (parsed.dateFormat === "DMY" || parsed.dateFormat === "YMD") {
+      dateFormatPref = parsed.dateFormat as DateFormatPref;
+    }
+  } catch { /* use default */ }
 
   const destinations: Array<{ city: string; country: string }> = JSON.parse(
     (trip.destinations as unknown as string) || "[]"
@@ -103,7 +114,7 @@ export default async function TripOverviewPage({ params }: TripPageProps) {
   const heroGradient = getHeroGradient(trip.primaryDestination ?? "", trip.status);
 
   const formatTripDate = (d: Date | null) =>
-    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+    d ? formatDateByPref(d, dateFormatPref) : null;
 
   const startStr = formatTripDate(trip.startsAt);
   const endStr = formatTripDate(trip.endsAt);
