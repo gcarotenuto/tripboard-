@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { mutate } from "swr";
 import useSWR from "swr";
-import { PlusCircle, Loader2, BookOpen } from "lucide-react";
+import { PlusCircle, Loader2, BookOpen, Luggage } from "lucide-react";
 import { ALL_CURRENCIES } from "@tripboard/shared";
 import { useToast } from "@/components/ui/Toast";
 
@@ -292,11 +292,109 @@ function QuickJournalModal({ tripId, onClose }: QuickModalBaseProps) {
   );
 }
 
+// ── Quick Packing Modal ───────────────────────────────────────────────────────
+
+const PACKING_CATEGORIES = [
+  { value: "CLOTHING", label: "👕 Clothing" },
+  { value: "TOILETRIES", label: "🧴 Toiletries" },
+  { value: "DOCUMENTS", label: "📄 Documents" },
+  { value: "ELECTRONICS", label: "💻 Electronics" },
+  { value: "HEALTH", label: "💊 Health" },
+  { value: "MONEY", label: "💳 Money" },
+  { value: "OTHER", label: "🎒 Other" },
+];
+
+function QuickPackingModal({ tripId, onClose }: QuickModalBaseProps) {
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("OTHER");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/packing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), category, quantity: 1 }),
+      });
+      if (res.ok) {
+        await mutate(`/api/trips/${tripId}/packing`);
+        await mutate(`/api/trips/${tripId}/stats`);
+        toast("Item added to packing list ✓");
+        onClose();
+      } else {
+        toast("Failed to add item — please try again", "error");
+      }
+    } catch {
+      toast("Network error", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-5">
+        <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
+          <Luggage className="h-4 w-4 text-teal-500" />
+          Add to packing list
+        </h3>
+        <form onSubmit={handleSave} className="space-y-3">
+          <input
+            autoFocus
+            type="text"
+            placeholder="What do you need to pack?"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {PACKING_CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => setCategory(cat.value)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                  category === cat.value
+                    ? "bg-teal-50 dark:bg-teal-950/40 border border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300"
+                    : "border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-zinc-200 dark:border-zinc-700 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving || !name.trim()} className="flex-1 rounded-xl bg-teal-600 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+              {saving ? <><Loader2 className="h-4 w-4 animate-spin" />Adding…</> : "Add item"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── QuickActions ───────────────────────────────────────────────────────────────
 
 export function QuickActions({ tripId }: { tripId: string }) {
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
+  const [packingOpen, setPackingOpen] = useState(false);
 
   const actions = [
     {
@@ -334,6 +432,13 @@ export function QuickActions({ tripId }: { tripId: string }) {
       label: "Add event",
       color: "hover:border-indigo-200 dark:hover:border-indigo-800 hover:text-indigo-700 dark:hover:text-indigo-400",
     },
+    {
+      type: "button" as const,
+      onClick: () => setPackingOpen(true),
+      icon: <Luggage className="h-4 w-4 shrink-0" />,
+      label: "Pack item",
+      color: "hover:border-teal-200 dark:hover:border-teal-800 hover:text-teal-700 dark:hover:text-teal-400",
+    },
   ];
 
   const baseClass =
@@ -345,7 +450,7 @@ export function QuickActions({ tripId }: { tripId: string }) {
         <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-3">
           Quick actions
         </p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {actions.map((action) =>
             action.type === "button" ? (
               <button
@@ -372,6 +477,7 @@ export function QuickActions({ tripId }: { tripId: string }) {
 
       {expenseOpen && <QuickExpenseModal tripId={tripId} onClose={() => setExpenseOpen(false)} />}
       {journalOpen && <QuickJournalModal tripId={tripId} onClose={() => setJournalOpen(false)} />}
+      {packingOpen && <QuickPackingModal tripId={tripId} onClose={() => setPackingOpen(false)} />}
     </>
   );
 }
