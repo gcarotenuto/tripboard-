@@ -9,16 +9,23 @@ export async function GET() {
 
   const userId = (session.user as { id: string }).id;
 
-  const trips = await prisma.trip.findMany({
-    where: { userId, deletedAt: null },
-    select: {
-      status: true,
-      primaryDestination: true,
-      destinations: true,
-      startsAt: true,
-      endsAt: true,
-    },
-  });
+  const [trips, expenseAgg] = await Promise.all([
+    prisma.trip.findMany({
+      where: { userId, deletedAt: null },
+      select: {
+        status: true,
+        primaryDestination: true,
+        destinations: true,
+        startsAt: true,
+        endsAt: true,
+      },
+    }),
+    prisma.expense.aggregate({
+      where: { userId },
+      _sum: { amountUsd: true },
+      _count: { id: true },
+    }),
+  ]);
 
   const totalTrips = trips.length;
   const completedTrips = trips.filter((t) => t.status === "COMPLETED" || t.status === "ARCHIVED").length;
@@ -43,7 +50,7 @@ export async function GET() {
     }
   }
 
-  // Total days traveled (sum of completed trips)
+  // Total days traveled (sum of all trips with dates)
   let totalDays = 0;
   for (const trip of trips) {
     if (trip.startsAt && trip.endsAt) {
@@ -52,12 +59,17 @@ export async function GET() {
     }
   }
 
+  // Lifetime expenses (in USD equivalent, falls back to raw sum if no conversion)
+  const lifetimeExpensesUsd = expenseAgg._sum.amountUsd ?? null;
+  const lifetimeExpenseCount = expenseAgg._count.id;
+
   return NextResponse.json({
     data: {
       totalTrips,
       completedTrips,
       countriesCount: countries.size,
       totalDays,
+      lifetimeExpensesUsd: lifetimeExpenseCount > 0 ? lifetimeExpensesUsd : null,
     },
   });
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import useSWR from "swr";
 import { ArrowRight, CalendarCheck, CalendarClock } from "lucide-react";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -155,6 +156,7 @@ function UpcomingEventsPreview({ tripId }: { tripId: string }) {
 // ── Active trip today agenda ───────────────────────────────────────────────────
 
 function ActiveTodayAgenda({ tripId }: { tripId: string }) {
+  const fmtDate = useFormatDate();
   const { data: events } = useSWR<TripEvent[]>(
     `/api/trips/${tripId}/events`,
     fetcher
@@ -228,9 +230,7 @@ function ActiveTodayAgenda({ tripId }: { tripId: string }) {
                   </p>
                   {nextFutureEvent.startsAt && (
                     <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
-                      {new Date(nextFutureEvent.startsAt).toLocaleDateString("en-US", {
-                        weekday: "short", month: "short", day: "numeric",
-                      })}
+                      {fmtDate(nextFutureEvent.startsAt)}
                     </p>
                   )}
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { formatCurrency } from "@tripboard/shared";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json()).then((r) => r.data);
 
@@ -9,6 +10,7 @@ interface UserStats {
   completedTrips: number;
   countriesCount: number;
   totalDays: number;
+  lifetimeExpensesUsd: number | null;
 }
 
 export function UserStatsStrip() {
@@ -16,11 +18,16 @@ export function UserStatsStrip() {
 
   if (!data || data.totalTrips === 0) return null;
 
-  const stats = [
+  const stats: Array<{ value: string | number; label: string; emoji: string }> = [
     { value: data.totalTrips, label: data.totalTrips === 1 ? "trip" : "trips", emoji: "✈️" },
     ...(data.countriesCount > 0 ? [{ value: data.countriesCount, label: data.countriesCount === 1 ? "country" : "countries", emoji: "🌍" }] : []),
     ...(data.totalDays > 0 ? [{ value: data.totalDays, label: "days traveled", emoji: "📅" }] : []),
     ...(data.completedTrips > 0 ? [{ value: data.completedTrips, label: "completed", emoji: "🏅" }] : []),
+    ...(data.lifetimeExpensesUsd != null ? [{
+      value: formatCurrency(data.lifetimeExpensesUsd, "USD"),
+      label: "lifetime spend",
+      emoji: "💳",
+    }] : []),
   ];
 
   return (

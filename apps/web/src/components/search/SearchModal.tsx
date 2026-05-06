@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { Search, Map, CalendarDays, CreditCard, BookOpen, X, ArrowRight, Sun, Archive, Settings } from "lucide-react";
+import { formatCurrency } from "@tripboard/shared";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 interface TripResult {
   id: string;
@@ -92,6 +94,7 @@ const SECTION_ICON_BG: Record<string, string> = {
 
 export function SearchModal({ open, onClose }: SearchModalProps) {
   const router = useRouter();
+  const fmtDate = useFormatDate();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -150,18 +153,18 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
 
     results.expenses.forEach((e) => items.push({
       id: e.id, href: `/trips/${e.tripId}/expenses`, label: e.title,
-      sub: `${e.currency} ${Number(e.amount).toFixed(2)}`, section: "Expenses",
+      sub: formatCurrency(Number(e.amount), e.currency), section: "Expenses",
       icon: SECTION_ICONS.Expenses,
     }));
 
     results.journal.forEach((e) => items.push({
       id: e.id, href: `/trips/${e.tripId}/journal`, label: e.title ?? "Untitled entry",
-      sub: e.entryDate ? new Date(e.entryDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : undefined,
+      sub: e.entryDate ? fmtDate(e.entryDate) : undefined,
       section: "Journal", icon: SECTION_ICONS.Journal,
     }));
 
     return items;
-  }, [results]);
+  }, [results, fmtDate]);
 
   // Auto-scroll selected item into view
   useEffect(() => {

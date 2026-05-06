@@ -5,6 +5,7 @@ import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import useSWR from "swr";
 import { useEffect } from "react";
+import { useFormatDate } from "@/context/UserPreferencesContext";
 
 // Fix Leaflet default icon paths (broken by webpack asset hashing)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -55,6 +56,7 @@ function FitBounds({ positions }: { positions: [number, number][] }) {
 }
 
 export default function TripMapInner({ tripId }: { tripId: string }) {
+  const fmtDate = useFormatDate();
   const { data: events, isLoading } = useSWR<TripEvent[]>(
     `/api/trips/${tripId}/events`,
     fetcher
@@ -128,11 +130,7 @@ export default function TripMapInner({ tripId }: { tripId: string }) {
                 </p>
                 {event.startsAt && (
                   <p className="text-zinc-500 text-xs">
-                    {new Date(event.startsAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {fmtDate(event.startsAt)}
                   </p>
                 )}
                 {event.locationName && (

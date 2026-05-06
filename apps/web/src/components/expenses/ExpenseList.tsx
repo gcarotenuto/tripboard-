@@ -206,7 +206,7 @@ export function ExpenseList({ tripId }: { tripId: string }) {
       return 0;
     });
     return list;
-  }, [expenses, filterCategory, sort, search]);
+  }, [expenses, filterCategory, filterPaid, sort, search]);
 
   const isFiltering = filterCategory !== "ALL" || filterPaid !== "ALL" || search.trim().length > 0;
 
